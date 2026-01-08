@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Ticket, Compass, Star, Music } from "lucide-react";
+import { Search, Ticket, Compass, Star, Music, Sparkles } from "lucide-react";
+import { useLanguage } from "@/lib/language-context";
 
-const WORDS = ["Events", "NightLife", "Attractions"];
+const WORDS_EN = ["Events", "NightLife", "Attractions"];
+const WORDS_AR = ["الفعاليات", "المغامرات", "التجارب"];
 
 // const QUICK_FILTERS = [
 //   { label: 'Events', icon: <Star className="w-4 h-4" />, color: 'bg-purple-500' },
@@ -13,14 +15,16 @@ const WORDS = ["Events", "NightLife", "Attractions"];
 // ];
 
 export function HeroSection() {
+  const { language, t } = useLanguage();
   const [index, setIndex] = useState(0);
+  const words = language === "ar" ? WORDS_AR : WORDS_EN;
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setIndex((prev) => (prev + 1) % WORDS.length);
-    }, 1000);
+      setIndex((prev) => (prev + 1) % words.length);
+    }, 2000);
     return () => clearInterval(interval);
-  }, []);
+  }, [words.length]);
 
   return (
     <div className="relative min-h-[500px] md:min-h-[600px] w-full  overflow-hidden flex flex-col items-center justify-center">
@@ -33,44 +37,46 @@ export function HeroSection() {
       <div className="absolute inset-0 " />
       <div className="absolute inset-0 " />
       
-      <div className="relative container z-10 px-4 w-full flex flex-col items-end pt-16">
+      <div className="relative container z-10 px-4 w-full flex flex-col items-center pt-16">
         
-        <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white text-end mb-8 drop-shadow-xl leading-snug flex flex-col items-end">
-          <span className="block mb-2">Discover</span>
-          <span 
-            className="block text-transparent bg-clip-text text-5xl md:text-7xl lg:text-8xl transition-all duration-300 transform scale-105"
-            style={{ 
-              WebkitTextStroke: '1px white',
-              fontFamily: 'inherit'
-            }}
-          >
-            {WORDS[index]}
-          </span>
-          <span className="block mt-2">in your city</span>
-        </h1>
+        <div className="text-center mb-10 space-y-2">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white drop-shadow-2xl">
+            {t("discover")}
+          </h1>
+          <div className="h-20 md:h-28 overflow-hidden">
+             <span 
+              className="block text-4xl md:text-6xl lg:text-7xl font-black text-white/90 drop-shadow-xl transition-all duration-500 transform"
+            >
+              {words[index]}
+            </span>
+          </div>
+          <p className="text-2xl md:text-4xl font-bold text-white/95 drop-shadow-lg">
+            {t("in_your_city")}
+          </p>
+        </div>
 
         {/* Main Search Container */}
-        <div className="w-full max-w-2xl relative animate-in fade-in slide-in-from-bottom-4 duration-700">
-           <div className="relative flex items-center w-full h-14 rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:border-white/20 transition-all group overflow-hidden">
+        <div className="w-full max-w-3xl relative animate-in fade-in slide-in-from-bottom-4 duration-700">
+           <div className="relative flex items-center w-full h-16 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 hover:border-white/40 transition-all group overflow-hidden shadow-2xl">
              
-             {/* Search Icon */}
-             <div className="pl-6 pr-3">
-               <Search className="w-5 h-5 text-white/80 group-hover:text-white transition-colors" />
+             {/* Left side Sparkle/Beta (from Image 0) */}
+             <div className="pl-6 pr-3 flex items-center gap-1.5 border-r border-white/10">
+                <div className="bg-[#9fffad] p-1.5 rounded-full">
+                  <Sparkles className="w-4 h-4 text-black" />
+                </div>
+                <span className="text-[#9fffad] font-bold text-sm">β</span>
              </div>
 
              {/* Input */}
              <input 
                type="text" 
-               placeholder="Search event or category..." 
-               className="w-full h-full bg-transparent border-none outline-none text-white placeholder:text-white/60 text-lg"
+               placeholder={t("search_placeholder")}
+               className="w-full h-full bg-transparent border-none outline-none text-white placeholder:text-white/70 text-lg px-4 font-medium"
              />
 
-             {/* Sparkle Icon/Badge */}
+             {/* Search Icon on the right */}
              <div className="pr-6 pl-3">
-               <div className="relative">
-                 <Star className="w-6 h-6 text-[#9fffad] fill-[#9fffad] animate-pulse" />
-                 <span className="absolute -bottom-1 -right-1 text-[10px] font-bold text-black/60">β</span>
-               </div>
+               <Search className="w-6 h-6 text-white/80 group-hover:text-white transition-colors" />
              </div>
 
            </div>

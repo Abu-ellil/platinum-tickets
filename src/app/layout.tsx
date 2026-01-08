@@ -10,6 +10,7 @@ const tajawal = Tajawal({
 
 import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
+import { LanguageProvider } from "@/lib/language-context";
 
 export const metadata: Metadata = {
   title: "Platinumlist - Event Tickets, Attractions & Concerts",
@@ -26,11 +27,13 @@ export default function RootLayout({
       <body
         className={`${tajawal.variable} font-sans antialiased bg-gray-50 flex flex-col min-h-screen`}
       >
-        <Navbar />
-        <main className="flex-1">
-          {children}
-        </main>
-        <Footer />
+        <LanguageProvider>
+          <Navbar />
+          <main className="flex-1">
+            {children}
+          </main>
+          <Footer />
+        </LanguageProvider>
       </body>
     </html>
   );

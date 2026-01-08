@@ -1,63 +1,78 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/lib/language-context";
 
 const CITIES = [
   {
-    id: "doha",
-    name: "Doha",
-    flag: "��",
-    image: "https://images.unsplash.com/photo-1530785602389-07594beb8b73?w=800&auto=format&fit=crop&q=60"
+    id: "rabat",
+    name: { en: "Rabat", ar: "الرباط" },
+    flag: "🇲🇦",
+    image: "https://images.unsplash.com/photo-1539667468225-8df6674149c0?w=800&auto=format&fit=crop&q=60"
   },
   {
-    id: "manama",
-    name: "Manama",
-    flag: "��",
-    image: "https://images.unsplash.com/photo-lC3p0F8-l50?w=800&auto=format&fit=crop&q=60"
+    id: "istanbul",
+    name: { en: "Istanbul", ar: "إسطنبول" },
+    flag: "🇹🇷",
+    image: "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=800&auto=format&fit=crop&q=60"
+  },
+  {
+    id: "bursa",
+    name: { en: "Bursa", ar: "بورصة" },
+    flag: "🇹🇷",
+    image: "https://images.unsplash.com/photo-1589149021966-51d07c0b0507?w=800&auto=format&fit=crop&q=60"
+  },
+  {
+    id: "antalya",
+    name: { en: "Antalya", ar: "أنطاليا" },
+    flag: "🇹🇷",
+    image: "https://images.unsplash.com/photo-1542052106173-ef8958d89a13?w=800&auto=format&fit=crop&q=60"
   }
 ];
 
 export function CityGrid() {
+  const { language, t } = useLanguage();
+
   return (
     <section className="py-8">
-      <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Select your city</h2>
-      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <h2 className="text-2xl md:text-3xl font-black text-gray-900 mb-8 text-center md:text-right">
+        {t("select_city")}
+      </h2>
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {CITIES.map((city) => (
           <Link 
             key={city.id} 
             href={`/city/${city.id}`}
             className="group block"
           >
-            <div className="relative aspect-[16/10] rounded-2xl overflow-hidden mb-3 shadow-md">
-              <Image 
+            <div className="relative aspect-[16/10] rounded-[24px] overflow-hidden mb-4 shadow-sm group-hover:shadow-xl transition-all duration-300">
+              <img 
                 src={city.image} 
-                alt={city.name} 
-                fill 
-                className="object-cover transition-transform duration-500 group-hover:scale-110"
+                alt={city.name[language]} 
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               />
-              <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
+              <div className="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors" />
             </div>
             
-            <div className="flex items-center gap-3 px-1">
-              <span className="text-2xl shadow-sm rounded-sm overflow-hidden flex items-center justify-center">
-                {city.flag}
+            <div className="flex items-center gap-2 px-1 justify-center md:justify-start">
+              <span className="text-lg font-bold text-gray-900 group-hover:text-purple-700 transition-colors">
+                {city.name[language]}
               </span>
-              <span className="text-lg font-medium text-gray-800 group-hover:text-purple-700 transition-colors">
-                {city.name}
+              <span className="text-xl flex items-center justify-center p-0.5 bg-gray-100 rounded-sm">
+                {city.flag}
               </span>
             </div>
           </Link>
         ))}
       </div>
       
-      <div className="mt-8 flex justify-center">
+      <div className="mt-10 flex justify-center">
         <Button 
           variant="outline" 
-          className="w-full md:w-auto min-w-[200px] h-12 text-lg font-medium border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg"
+          className="w-full md:w-auto min-w-[300px] h-14 text-xl font-bold border-gray-200 text-gray-900 hover:bg-gray-50 rounded-xl shadow-sm"
         >
-          Show more
+          {t("show_more")}
         </Button>
       </div>
     </section>
