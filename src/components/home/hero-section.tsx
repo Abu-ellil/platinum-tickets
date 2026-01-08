@@ -23,19 +23,19 @@ export function HeroSection() {
   }, []);
 
   return (
-    <div className="relative min-h-[500px] md:min-h-[600px] w-full bg-[#1a0b2e] overflow-hidden flex flex-col items-center justify-center">
+    <div className="relative min-h-[500px] md:min-h-[600px] w-full  overflow-hidden flex flex-col items-center justify-center">
       {/* Background Image */}
       <div 
          className="absolute inset-0 bg-cover bg-center"
-         style={{ backgroundImage: 'url("/bg-worldwide-header-sm-4.webp")' }}
+         style={{ backgroundImage: 'url("/bg-worldwide-header3.webp")' }}
       />
       {/* Gradient Overlay - Purple/Blue tone matching Platinumlist */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-[#1a0b2e] via-[#2d1b4e]/20 to-transparent opacity-90" />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0f1c] via-transparent to-transparent" />
+      <div className="absolute inset-0 " />
+      <div className="absolute inset-0 " />
       
-      <div className="relative container z-10 px-4 w-full flex flex-col items-center pt-16">
+      <div className="relative container z-10 px-4 w-full flex flex-col items-end pt-16">
         
-        <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white text-center mb-8 drop-shadow-xl leading-snug flex flex-col items-center">
+        <h1 className="text-3xl md:text-5xl lg:text-6xl font-black text-white text-end mb-8 drop-shadow-xl leading-snug flex flex-col items-end">
           <span className="block mb-2">Discover</span>
           <span 
             className="block text-transparent bg-clip-text text-5xl md:text-7xl lg:text-8xl transition-all duration-300 transform scale-105"
