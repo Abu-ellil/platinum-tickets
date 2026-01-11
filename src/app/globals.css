@@ -55,7 +55,7 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
   /* Primary: Dark Navy #0a0f1c */
-  --primary: #0a0f1c; 
+  --primary: #0a0f1c;
   --primary-foreground: oklch(0.985 0 0);
   /* Secondary: Light gray or accent */
   --secondary: oklch(0.97 0 0);
@@ -63,7 +63,7 @@
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
   /* Accent: Platinumlist Pink/Purple */
-  --accent: #8B5CF6;
+  --accent: #8b5cf6;
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
@@ -84,7 +84,20 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+@keyframes slide-up {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
 
+.animate-slide-up {
+  animation: slide-up 0.5s ease-in-out;
+}
 
 @layer base {
   * {
