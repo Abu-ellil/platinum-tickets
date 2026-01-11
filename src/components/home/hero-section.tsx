@@ -37,7 +37,7 @@ export function HeroSection() {
       <div className="absolute inset-0 " />
       <div className="absolute inset-0 " />
 
-      <div className="relative container z-10 px-4 w-full flex flex-col  pt-16">
+      <div className="relative container z-10 px-6 w-full flex flex-col  pt-10">
         <div className=" mb-10 space-y-2">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-white drop-shadow-2xl">
             {t("discover")}
