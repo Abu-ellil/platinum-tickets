@@ -7,6 +7,27 @@ import { useLanguage } from "@/lib/language-context";
 
 const CITIES = [
   {
+    id: "cairo",
+    name: { en: "Cairo", ar: "القاهرة" },
+    flag: "🇪🇬",
+    image:
+      "https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=800&auto=format&fit=crop&q=60",
+  },
+  {
+    id: "doha",
+    name: { en: "Doha", ar: "الدوحة" },
+    flag: "🇶🇦",
+    image:
+      "https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=800&auto=format&fit=crop&q=60",
+  },
+  {
+    id: "muscat",
+    name: { en: "Muscat", ar: "مسقط" },
+    flag: "🇴🇲",
+    image:
+      "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=800&auto=format&fit=crop&q=60",
+  },
+  {
     id: "rabat",
     name: { en: "Rabat", ar: "الرباط" },
     flag: "🇲🇦",
@@ -34,27 +55,7 @@ const CITIES = [
     image:
       "https://images.unsplash.com/photo-1542052106173-ef8958d89a13?w=800&auto=format&fit=crop&q=60",
   },
-  {
-    id: "cairo",
-    name: { en: "Cairo", ar: "القاهرة" },
-    flag: "🇪🇬",
-    image:
-      "https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=800&auto=format&fit=crop&q=60",
-  },
-  {
-    id: "doha",
-    name: { en: "Doha", ar: "الدوحة" },
-    flag: "🇶🇦",
-    image:
-      "https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=800&auto=format&fit=crop&q=60",
-  },
-  {
-    id: "muscat",
-    name: { en: "Muscat", ar: "مسقط" },
-    flag: "🇴🇲",
-    image:
-      "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=800&auto=format&fit=crop&q=60",
-  },
+  
 ];
 
 export function CityGrid() {
