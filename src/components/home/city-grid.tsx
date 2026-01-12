@@ -25,9 +25,11 @@ export function CityGrid() {
   useEffect(() => {
     async function fetchCities() {
       try {
-        const res = await fetch('/api/cities');
+        const res = await fetch('/api/cities', { cache: 'no-store' });
         const json = await res.json();
+        console.log('CityGrid API response:', json);
         if (json.success) {
+          console.log('CityGrid received cities:', json.data.length);
           setCities(json.data);
         }
       } catch (error) {
@@ -40,6 +42,8 @@ export function CityGrid() {
   }, []);
 
   const displayedCities = showAll ? cities : cities.slice(0, 4);
+
+  console.log('CityGrid render:', { showAll, citiesCount: cities.length, displayedCount: displayedCities.length });
 
   if (loading) {
     return (
@@ -85,14 +89,24 @@ export function CityGrid() {
         ))}
       </div>
 
-      {!showAll && cities.length > 4 && (
+      {!showAll && cities.length > 4 ? (
         <div className="mt-10 flex justify-center">
           <Button
             variant="outline"
             onClick={() => setShowAll(true)}
-            className="w-full md:w-auto min-w-[300px] h-14 text-xl font-bold border-gray-200 text-gray-900 hover:bg-gray-50 rounded-xl shadow-sm"
+            className="w-full md:w-auto min-w-[300px] h-14 text-xl font-bold rounded-2xl shadow-lg hover:scale-105 transition-all duration-300 bg-white text-gray-900 border-gray-900 hover:bg-gray-900 hover:text-white hover:border-white"
           >
             {t("show_more")}
+          </Button>
+        </div>
+      ) : showAll && cities.length > 4 && (
+        <div className="mt-10 flex justify-center">
+          <Button
+            variant="outline"
+            onClick={() => setShowAll(false)}
+            className="w-full md:w-auto min-w-[300px] h-14 text-xl font-bold border-gray-600 text-white hover:bg-gray-50 rounded-2xl shadow-sm"
+          >
+            {t("show_less")}
           </Button>
         </div>
       )}

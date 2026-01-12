@@ -3,18 +3,22 @@ import dbConnect from '@/lib/mongodb';
 import City from '@/models/City';
 import { CITIES } from '@/lib/venues-registry';
 
+export const dynamic = 'force-dynamic';
+
 // GET /api/cities - List all cities
 export async function GET() {
   try {
     await dbConnect();
     
+    console.log('GET /api/cities - Database connected');
     const cities = await City.find({})
       .sort({ 'name.en': 1 })
       .lean();
+    console.log(`GET /api/cities - Found ${cities.length} cities`);
     
     return NextResponse.json({ success: true, data: cities });
   } catch (error) {
-    console.error('Database connection failed, falling back to static cities data:', error);
+    console.error('Database connection failed:', error);
     
     // Fallback to static data if DB is not available
     const fallbackCities = CITIES.map(city => ({
@@ -32,7 +36,7 @@ export async function GET() {
     return NextResponse.json({ 
       success: true, 
       data: fallbackCities,
-      warning: 'Using static fallback data because database connection failed.'
+      warning: `Using static fallback data. Error: ${error instanceof Error ? error.message : String(error)}`
     });
   }
 }

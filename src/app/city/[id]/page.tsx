@@ -145,6 +145,7 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
             fill
             className="object-cover"
             priority
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 100vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12 lg:p-16 max-w-7xl mx-auto w-full">
@@ -203,7 +204,7 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
               {events.length > 0 ? events.map((event: any) => (
                 <Link href={`/events/${event._id}`} key={event._id} className="min-w-[280px] md:min-w-[340px] snap-start mb-2 group cursor-pointer transition-all">
                   <div className="relative aspect-[16/10] rounded-2xl overflow-hidden mb-4 shadow-sm group-hover:shadow-xl transition-all duration-500">
-                    <Image src={event.image} alt={event.title[language]} fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
+                    <Image src={event.image} alt={event.title[language]} fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
 
                     {/* Overlays */}
                     <div className="absolute top-4 left-4 flex flex-col gap-2">
@@ -270,7 +271,7 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
                 {featuredEvents.map((event: any) => (
                   <Link href={`/events/${event._id}`} key={event._id} className="flex gap-4 group cursor-pointer">
                     <div className="relative w-24 h-24 rounded-2xl overflow-hidden shrink-0 shadow-sm group-hover:shadow-md transition-all">
-                      <Image src={event.image} alt={event.title[language]} fill className="object-cover group-hover:scale-110 transition-transform" />
+                      <Image src={event.image} alt={event.title[language]} fill className="object-cover group-hover:scale-110 transition-transform" sizes="96px" />
                     </div>
                     <div className="flex flex-col justify-center py-1">
                       <h4 className="font-bold text-gray-900 text-sm md:text-base mb-1 line-clamp-2">{event.title[language]}</h4>
@@ -302,7 +303,7 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
                   return (
                     <div key={cat._id} className="flex flex-col items-center gap-4 min-w-[100px] group cursor-pointer">
                       <div className="w-24 h-24 rounded-full overflow-hidden relative border-4 border-white shadow-xl group-hover:scale-110 group-hover:-translate-y-2 transition-all duration-500 ease-out ring-1 ring-gray-100">
-                        <Image src={cat.image} alt={cat.label[language]} fill className="object-cover transition-transform group-hover:scale-110" />
+                        <Image src={cat.image} alt={cat.label[language]} fill className="object-cover transition-transform group-hover:scale-110" sizes="96px" />
                         <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
                         <div className="absolute inset-0 flex items-center justify-center">
                           <Icon className="w-10 h-10 text-white opacity-90 drop-shadow-md" />
@@ -325,7 +326,7 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
               {artists.map((artist, i) => (
                 <div key={artist._id} className="flex flex-col items-center gap-4 min-w-[100px] group cursor-pointer text-center">
                   <div className="w-24 h-24 rounded-full overflow-hidden relative shadow-xl group-hover:ring-8 group-hover:ring-blue-50 transition-all duration-500 transform group-hover:scale-105">
-                    <Image src={artist.image} alt={artist.name[language]} fill className="object-cover" />
+                    <Image src={artist.image} alt={artist.name[language]} fill className="object-cover" sizes="96px" />
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <span className="text-sm font-black text-gray-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{artist.name[language]}</span>
@@ -353,8 +354,8 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
             </p>
             <div className="flex flex-col items-center gap-4">
               <div className="flex gap-4">
-                <Image src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg" alt="App Store" width={120} height={40} />
-                <Image src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Google Play" width={135} height={40} />
+                <Image src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg" alt="App Store" width={120} height={40} unoptimized />
+                <Image src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Google Play" width={135} height={40} unoptimized />
               </div>
               <div className="bg-black text-white px-8 py-3 rounded-2xl font-bold flex items-center gap-2">
                 <ExternalLink className="w-4 h-4" />
