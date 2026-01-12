@@ -17,7 +17,7 @@ const WORDS_AR = ["ابرز الفعاليات", "والمغامرات", "وال
 export function HeroSection() {
   const { language, t } = useLanguage();
   const [index, setIndex] = useState(0);
-  const words = language === "ar" ? WORDS_AR : WORDS_EN;
+  const words = [t("events"), t("nightlife"), t("attractions")];
 
   useEffect(() => {
     const interval = setInterval(() => {

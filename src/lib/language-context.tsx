@@ -45,6 +45,11 @@ const translations = {
     nearby_city_events: "Top events in nearby cities",
     other_cities_events: "Other cities with available events",
     discover_more: "Discover More",
+    popular: "Popular",
+    musician: "Musician",
+    no_events_found: "No events found in this city yet.",
+    city_not_found: "City not found",
+    go_home: "Go to Home Page",
   },
   ar: {
     discover: "اكتشف",
@@ -79,6 +84,11 @@ const translations = {
     nearby_city_events: "أبرز الفعاليات الترفيهية التي تقام في المدن القريبة منك",
     other_cities_events: "المدن الأخرى مع الفعاليات المتاحة حالياً",
     discover_more: "اكتشف المزيد",
+    popular: "شائع",
+    musician: "موسيقي",
+    no_events_found: "لا توجد فعاليات في هذه المدينة حالياً",
+    city_not_found: "المدينة غير موجودة",
+    go_home: "العودة للرئيسية",
   },
 };
 

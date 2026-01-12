@@ -10,6 +10,8 @@ export interface ICity extends Document {
     en: string;
   };
   image: string;
+  slug: string;
+  flag: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,9 +27,13 @@ const CitySchema = new Schema<ICity>(
       en: { type: String, required: true },
     },
     image: { type: String, required: true },
+    slug: { type: String, required: true, unique: true },
+    flag: { type: String, required: true },
   },
   { timestamps: true }
 );
+
+CitySchema.index({ slug: 1 });
 
 // Prevent model recompilation in development
 const City: Model<ICity> = mongoose.models.City || mongoose.model<ICity>('City', CitySchema);
