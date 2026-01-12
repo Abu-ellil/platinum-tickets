@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import City from '@/models/City';
+import { CITIES } from '@/lib/venues-registry';
 
 // GET /api/cities - List all cities
 export async function GET() {
@@ -13,11 +14,26 @@ export async function GET() {
     
     return NextResponse.json({ success: true, data: cities });
   } catch (error) {
-    console.error('Error fetching cities:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch cities' },
-      { status: 500 }
-    );
+    console.error('Database connection failed, falling back to static cities data:', error);
+    
+    // Fallback to static data if DB is not available
+    const fallbackCities = CITIES.map(city => ({
+      _id: city.id,
+      name: city.name,
+      country: city.country,
+      image: city.image,
+      slug: city.id,
+      flag: city.id === 'doha' ? '🇶🇦' : 
+            city.id === 'manama' ? '🇧🇭' : 
+            city.id === 'dubai' ? '🇦🇪' : 
+            city.id === 'riyadh' ? '🇸🇦' : '📍',
+    }));
+
+    return NextResponse.json({ 
+      success: true, 
+      data: fallbackCities,
+      warning: 'Using static fallback data because database connection failed.'
+    });
   }
 }
 

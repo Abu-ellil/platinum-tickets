@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Category from '@/models/Category';
+import { FALLBACK_CATEGORIES } from '@/lib/fallback-data';
 
 // GET /api/categories - List all categories
 export async function GET() {
@@ -13,11 +14,13 @@ export async function GET() {
     
     return NextResponse.json({ success: true, data: categories });
   } catch (error) {
-    console.error('Error fetching categories:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch categories' },
-      { status: 500 }
-    );
+    console.error('Database connection failed, falling back to static categories data:', error);
+    
+    return NextResponse.json({ 
+      success: true, 
+      data: FALLBACK_CATEGORIES,
+      warning: 'Using static fallback data because database connection failed.'
+    });
   }
 }
 

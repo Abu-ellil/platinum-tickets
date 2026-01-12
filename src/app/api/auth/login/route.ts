@@ -30,10 +30,15 @@ export async function POST(request: Request) {
 
     // Create session
     const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-    const session = await encrypt({ adminId: admin._id, username: admin.username, expires });
+    const session = await encrypt({ 
+      adminId: admin._id.toString(), 
+      username: admin.username, 
+      expires 
+    });
 
     // Set cookie
-    (await cookies()).set("session", session, {
+    const cookieStore = await cookies();
+    cookieStore.set("session", session, {
       expires,
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -42,10 +47,13 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ message: "Login successful" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Login Error:", error);
     return NextResponse.json(
-      { message: "Internal Server Error" },
+      { 
+        message: "Internal Server Error",
+        error: process.env.NODE_ENV === "development" ? error.message : undefined
+      },
       { status: 500 }
     );
   }

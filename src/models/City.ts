@@ -33,8 +33,6 @@ const CitySchema = new Schema<ICity>(
   { timestamps: true }
 );
 
-CitySchema.index({ slug: 1 });
-
 // Prevent model recompilation in development
 const City: Model<ICity> = mongoose.models.City || mongoose.model<ICity>('City', CitySchema);
 

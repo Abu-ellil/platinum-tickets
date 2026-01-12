@@ -2,16 +2,34 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+### 1. Prerequisites
+- Node.js 18+ 
+- MongoDB (Local or Atlas)
 
+### 2. Environment Setup
+Create a `.env.local` file in the root directory and add your MongoDB connection string:
+```bash
+cp .env.example .env.local
+```
+Then edit `.env.local` and set `MONGODB_URI`.
+
+### 3. Install Dependencies
+```bash
+npm install
+```
+
+### 4. Seed the Database
+Before running the app, you need to seed the database with initial data:
+```bash
+# Start the dev server first
+npm run dev
+# In another terminal, run the seed command (or visit /api/seed in your browser via POST)
+curl -X POST http://localhost:3000/api/seed
+```
+
+### 5. Run the Development Server
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
