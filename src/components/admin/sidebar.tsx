@@ -13,7 +13,8 @@ import {
     LogOut,
     Ticket,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/language-context";
@@ -28,13 +29,18 @@ const MENU_ITEMS = [
     { href: "/admin/stats", icon: BarChart3, label: "stats", labelAr: "الأرقام والإحصائيات" },
 ];
 
-export function AdminSidebar() {
+interface SidebarProps {
+    onClose?: () => void;
+    className?: string;
+}
+
+export function AdminSidebar({ onClose, className }: SidebarProps) {
     const pathname = usePathname();
     const { language, dir } = useLanguage();
 
-    return (
-        <div className="flex flex-col h-full bg-white border-e border-gray-200 w-64 fixed top-0 bottom-0 z-50">
-            <div className="p-6">
+    const SidebarContent = (
+        <div className={cn("flex flex-col h-full bg-white border-e border-gray-200 w-64 z-50", className)}>
+            <div className="p-6 flex items-center justify-between">
                 <Link href="/" className="flex items-center gap-2">
                     <Image
                         src="/pl-logo-desktop-ar.svg"
@@ -44,9 +50,14 @@ export function AdminSidebar() {
                         className="h-6 w-auto"
                     />
                 </Link>
+                {onClose && (
+                    <button onClick={onClose} className="lg:hidden p-2 text-gray-500">
+                        <X className="h-6 w-6" />
+                    </button>
+                )}
             </div>
 
-            <nav className="flex-1 px-4 py-4 space-y-1">
+            <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
                 {MENU_ITEMS.map((item) => {
                     const isActive = pathname === item.href;
                     const Icon = item.icon;
@@ -55,6 +66,7 @@ export function AdminSidebar() {
                         <Link
                             key={item.href}
                             href={item.href}
+                            onClick={onClose}
                             className={cn(
                                 "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group",
                                 isActive
@@ -87,4 +99,10 @@ export function AdminSidebar() {
             </div>
         </div>
     );
+
+    if (className?.includes("fixed")) {
+        return SidebarContent;
+    }
+
+    return SidebarContent;
 }

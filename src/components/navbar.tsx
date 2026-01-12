@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Menu, Search, UserRound, Globe, Ticket, ChevronLeft, ChevronRight, X, Phone, Users, MapPin, BadgeDollarSign, MoreHorizontal } from "lucide-react";
+import { Menu, Search, UserRound, Globe, Ticket, ChevronLeft, ChevronRight, X, Phone, Users, MapPin, BadgeDollarSign, MoreHorizontal, LayoutDashboard } from "lucide-react";
 import { FaUser } from "react-icons/fa";
 
 import Image from "next/image";
@@ -147,7 +147,11 @@ export function Navbar() {
                     </div>
                   </div>
 
-                  <div className="mt-6 border-t pt-6 px-4">
+                  <div className="mt-6 border-t pt-6 px-4 space-y-4">
+                    <Link href="/admin" className="flex items-center gap-3 text-xl font-bold text-blue-600">
+                      <LayoutDashboard className="h-6 w-6" />
+                      {language === 'ar' ? 'لوحة التحكم للآدمن' : 'Admin Dashboard'}
+                    </Link>
                     <Link href="#" className="block text-xl font-bold text-gray-900">
                       {t("sell_with_us")}
                     </Link>
