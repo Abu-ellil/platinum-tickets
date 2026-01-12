@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
-import { City, Venue, Artist, Category, Event } from '@/models';
+import { City, Venue, Artist, Category, Event, Admin } from '@/models';
+import bcrypt from 'bcryptjs';
 import { STAGE_CATEGORIES } from '@/lib/platinum-stage-data';
 import { MANAMA_CATEGORIES } from '@/lib/manama-amphitheater-data';
 
@@ -18,7 +19,16 @@ export async function POST() {
       Artist.deleteMany({}),
       Category.deleteMany({}),
       Event.deleteMany({}),
+      Admin.deleteMany({}),
     ]);
+
+    // Seed Admin
+    console.log('Seeding admin...');
+    const hashedPassword = await bcrypt.hash('admin123', 10);
+    await Admin.create({
+      username: 'admin',
+      password: hashedPassword,
+    });
     
     console.log('Seeding cities...');
     const citiesData = [

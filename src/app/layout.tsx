@@ -8,9 +8,8 @@ const tajawal = Tajawal({
   variable: "--font-tajawal",
 });
 
-import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
 import { LanguageProvider } from "@/lib/language-context";
+import { MainLayoutWrapper } from "@/components/main-layout-wrapper";
 
 export const metadata: Metadata = {
   title: "Platinumlist - Event Tickets, Attractions & Concerts",
@@ -29,11 +28,9 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <LanguageProvider>
-          <Navbar />
-          <main className="flex-1">
+          <MainLayoutWrapper>
             {children}
-          </main>
-          <Footer />
+          </MainLayoutWrapper>
         </LanguageProvider>
       </body>
     </html>

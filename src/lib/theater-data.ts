@@ -1,4 +1,5 @@
-import { Theater, Section, Row, Seat, SeatStatus } from "./types";
+import { Theater, Section, Row, Seat, SeatStatus, CategoryConfig } from "./types";
+import { MANAMA_AMPHITHEATER, MANAMA_CATEGORIES } from "./manama-amphitheater-data";
 
 const SEAT_RADIUS = 20;
 const SEAT_SPACING = 60;
@@ -92,4 +93,26 @@ const generateTheater = (): Theater => {
   };
 };
 
+
+
 export const MOCK_THEATER = generateTheater();
+
+export const DEFAULT_CATEGORIES: Record<string, CategoryConfig> = {
+  "VIP": { color: "#dc2626", price: 500, label: "VIP Ticket" },
+  "Premium": { color: "#3b82f6", price: 300, label: "Premium Ticket" }
+};
+
+export const getTheaterConfig = (eventId: string): { theater: Theater; categories: Record<string, CategoryConfig> } => {
+  if (eventId === "4451579" || eventId === "manama-event") {
+    return {
+      theater: MANAMA_AMPHITHEATER,
+      categories: MANAMA_CATEGORIES
+    };
+  }
+  
+  // Default to mock theater
+  return {
+    theater: MOCK_THEATER,
+    categories: DEFAULT_CATEGORIES
+  };
+};

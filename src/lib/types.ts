@@ -1,6 +1,12 @@
 export type SeatStatus = "available" | "selected" | "sold" | "reserved";
 
-export type StageCategory = "vip" | "royal" | "diamond" | "platinum" | "gold" | "silver";
+export type StageCategory = string;
+
+export interface CategoryConfig {
+  color: string;
+  price: number;
+  label: string;
+}
 
 export interface Seat {
   id: string;

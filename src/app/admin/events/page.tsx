@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLanguage } from "@/lib/language-context";
 import {
     Plus,
@@ -20,8 +20,7 @@ import {
     Check,
     Loader2
 } from "lucide-react";
-import { EVENTS, Event } from "@/lib/data";
-import { CITIES, VENUES_REGISTRY, getVenuesByCity, getCategoryConfig, VenueInfo } from "@/lib/venues-registry";
+import { VENUES_REGISTRY, getCategoryConfig } from "@/lib/venues-registry";
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,11 +49,31 @@ interface CategoryPrice {
     color: string;
 }
 
+interface IEvent {
+    _id: string;
+    title: { ar: string; en: string };
+    date: string;
+    venueId: { _id: string; name: { ar: string; en: string } };
+    cityId: { _id: string; name: { ar: string; en: string } };
+    image: string;
+    pricing: { price: number }[];
+    currency: string;
+    status: string;
+    type: string;
+    showTimes: { date: string }[];
+}
+
 export default function EventsManagement() {
     const { language, dir } = useLanguage();
-    const [events, setEvents] = useState<Event[]>(EVENTS);
+    const [events, setEvents] = useState<IEvent[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [isAddOpen, setIsAddOpen] = useState(false);
+
+    // Data for dropdowns
+    const [cities, setCities] = useState<any[]>([]);
+    const [apiVenues, setApiVenues] = useState<any[]>([]);
+    const [loadingVenues, setLoadingVenues] = useState(false);
 
     // Form state
     const [selectedCity, setSelectedCity] = useState("");
@@ -67,25 +86,92 @@ export default function EventsManagement() {
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [currency, setCurrency] = useState("EGP");
+    const [isSaving, setIsSaving] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Get venues filtered by selected city
-    const availableVenues = selectedCity ? getVenuesByCity(selectedCity) : [];
+    // Initial Fetch
+    useEffect(() => {
+        fetchEvents();
+        fetchCities();
+    }, []);
 
-    // Update category prices when venue changes
+    const fetchEvents = async () => {
+        try {
+            setLoading(true);
+            const res = await fetch('/api/events?limit=1000&status=all');
+            const json = await res.json();
+            if (json.success) {
+                setEvents(json.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch events:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchCities = async () => {
+        try {
+            const res = await fetch('/api/cities');
+            const json = await res.json();
+            if (json.success) {
+                setCities(json.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch cities:", error);
+        }
+    };
+
+    // When city changes, fetch venues for that city
+    const handleCityChange = async (cityId: string) => {
+        setSelectedCity(cityId);
+        setSelectedVenue("");
+        setCategoryPrices([]);
+        setApiVenues([]);
+
+        if (!cityId) return;
+
+        try {
+            setLoadingVenues(true);
+            const res = await fetch(`/api/venues?cityId=${cityId}`);
+            const json = await res.json();
+            if (json.success) {
+                setApiVenues(json.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch venues:", error);
+        } finally {
+            setLoadingVenues(false);
+        }
+    };
+
+    // When venue changes, try to load category config
     const handleVenueChange = (venueId: string) => {
         setSelectedVenue(venueId);
-        const venue = VENUES_REGISTRY.find(v => v.id === venueId);
-        if (venue) {
-            const categories = getCategoryConfig(venue.theaterId);
-            const prices: CategoryPrice[] = Object.entries(categories).map(([id, config]) => ({
-                categoryId: id,
-                label: config.label,
-                price: config.price,
-                color: config.color,
-            }));
-            setCategoryPrices(prices);
+
+        // Find the selected venue object from API list
+        const selectedApiVenue = apiVenues.find(v => v._id === venueId);
+
+        if (selectedApiVenue) {
+            // Find corresponding registry venue for config (matching by English name)
+            // This maps the dynamic DB venue to the static UI config for seating/pricing categories
+            const registryVenue = VENUES_REGISTRY.find(v => v.name.en === selectedApiVenue.name.en);
+
+            if (registryVenue) {
+                const categories = getCategoryConfig(registryVenue.theaterId);
+                const prices: CategoryPrice[] = Object.entries(categories).map(([id, config]) => ({
+                    categoryId: id,
+                    label: config.label,
+                    price: config.price,
+                    color: config.color,
+                }));
+                setCategoryPrices(prices);
+            } else {
+                // Fallback if no registry match: generic pricing or empty
+                console.warn("No registry config found for venue:", selectedApiVenue.name.en);
+                setCategoryPrices([]);
+            }
         }
     };
 
@@ -133,12 +219,14 @@ export default function EventsManagement() {
             const result = await uploadToCloudinary(imageFile);
             if (result.secure_url) {
                 setImageUrl(result.secure_url);
+                return result.secure_url;
             }
         } catch (error) {
             console.error("Upload failed:", error);
         } finally {
             setIsUploading(false);
         }
+        return null;
     };
 
     // Reset form
@@ -152,44 +240,86 @@ export default function EventsManagement() {
         setImageUrl("");
         setImageFile(null);
         setCurrency("EGP");
+        setApiVenues([]);
     };
 
     // Save event
     const handleSaveEvent = async () => {
-        // Upload image first if not already uploaded
-        if (imageFile && !imageUrl.startsWith("https://res.cloudinary")) {
-            await handleImageUpload();
+        setIsSaving(true);
+        try {
+            let finalImageUrl = imageUrl;
+            // Upload image first if not already uploaded
+            if (imageFile && !imageUrl.startsWith("https://res.cloudinary")) {
+                const uploadedUrl = await handleImageUpload();
+                if (uploadedUrl) finalImageUrl = uploadedUrl;
+            }
+
+            // Construct payload 
+            const payload = {
+                title: {
+                    ar: eventTitleAr || eventTitle,
+                    en: eventTitle || eventTitleAr
+                },
+                venueId: selectedVenue, // Now a valid ObjectId from API
+                cityId: selectedCity,   // Now a valid ObjectId from API
+                showTimes: showTimes.map(st => ({
+                    date: new Date(`${st.date}T${st.time}`),
+                    time: st.time
+                })),
+                pricing: categoryPrices.map(cp => ({
+                    categoryId: cp.categoryId,
+                    price: cp.price
+                })),
+                image: finalImageUrl || "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=800",
+                currency: currency,
+                status: 'active',
+                type: 'concert',
+                featured: false,
+            };
+
+            const res = await fetch('/api/events', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                setEvents([data.data, ...events]);
+                resetForm();
+                setIsAddOpen(false);
+            } else {
+                alert("Failed to save event: " + (data.error || "Unknown error"));
+            }
+
+        } catch (error) {
+            console.error("Error saving event:", error);
+            alert("Error saving event");
+        } finally {
+            setIsSaving(false);
         }
+    };
 
-        // Create new event
-        const venue = VENUES_REGISTRY.find(v => v.id === selectedVenue);
-        const newEvent: Event = {
-            id: Date.now().toString(),
-            title: eventTitleAr || eventTitle,
-            date: showTimes[0]?.date || "",
-            venue: venue?.name.ar || venue?.name.en || "",
-            price: categoryPrices[0]?.price || 0,
-            currency: currency as Event["currency"],
-            image: imageUrl || "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=800",
-            category: "New",
-            type: "concert",
-        };
+    const handleDelete = async (id: string) => {
+        if (confirm(language === "ar" ? "هل أنت متأكد من حذف هذه الفعالية؟" : "Are you sure you want to delete this event?")) {
+            const oldEvents = events;
+            setEvents(events.filter(e => e._id !== id));
 
-        setEvents([newEvent, ...events]);
-        resetForm();
-        setIsAddOpen(false);
+            try {
+                console.warn("DELETE not persisted to DB yet (endpoint missing)");
+                // Placeholder for delete API call
+                // await fetch(`/api/events/${id}`, { method: 'DELETE' });
+            } catch (e) {
+                setEvents(oldEvents);
+                alert("Failed to delete");
+            }
+        }
     };
 
     const filteredEvents = events.filter(event =>
-        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        event.venue.toLowerCase().includes(searchTerm.toLowerCase())
+        (event.title?.[language] || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (event.venueId?.name?.[language] || "").toLowerCase().includes(searchTerm.toLowerCase())
     );
-
-    const handleDelete = (id: string) => {
-        if (confirm(language === "ar" ? "هل أنت متأكد من حذف هذه الفعالية؟" : "Are you sure you want to delete this event?")) {
-            setEvents(events.filter(e => e.id !== id));
-        }
-    };
 
     return (
         <div className="space-y-6 md:space-y-8">
@@ -272,12 +402,12 @@ export default function EventsManagement() {
                                     </label>
                                     <select
                                         value={selectedCity}
-                                        onChange={(e) => { setSelectedCity(e.target.value); setSelectedVenue(""); setCategoryPrices([]); }}
+                                        onChange={(e) => handleCityChange(e.target.value)}
                                         className="flex h-12 w-full items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 border-none"
                                     >
                                         <option value="">{language === 'ar' ? 'اختر المدينة...' : 'Select city...'}</option>
-                                        {CITIES.map(city => (
-                                            <option key={city.id} value={city.id}>
+                                        {cities.map(city => (
+                                            <option key={city._id} value={city._id}>
                                                 {language === 'ar' ? city.name.ar : city.name.en}
                                             </option>
                                         ))}
@@ -294,11 +424,16 @@ export default function EventsManagement() {
                                         <select
                                             value={selectedVenue}
                                             onChange={(e) => handleVenueChange(e.target.value)}
-                                            className="flex h-12 w-full items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 border-none"
+                                            disabled={loadingVenues}
+                                            className="flex h-12 w-full items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 border-none disabled:opacity-50"
                                         >
-                                            <option value="">{language === 'ar' ? 'اختر المسرح...' : 'Select venue...'}</option>
-                                            {availableVenues.map(venue => (
-                                                <option key={venue.id} value={venue.id}>
+                                            <option value="">
+                                                {loadingVenues
+                                                    ? (language === 'ar' ? 'جار التحميل...' : 'Loading...')
+                                                    : (language === 'ar' ? 'اختر المسرح...' : 'Select venue...')}
+                                            </option>
+                                            {apiVenues.map(venue => (
+                                                <option key={venue._id} value={venue._id}>
                                                     {language === 'ar' ? venue.name.ar : venue.name.en}
                                                 </option>
                                             ))}
@@ -421,9 +556,9 @@ export default function EventsManagement() {
                                 <Button
                                     className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-100 gap-2"
                                     onClick={handleSaveEvent}
-                                    disabled={!selectedVenue || !eventTitleAr || isUploading}
+                                    disabled={!selectedVenue || !eventTitleAr || isUploading || isSaving}
                                 >
-                                    {isUploading ? (
+                                    {isUploading || isSaving ? (
                                         <>
                                             <Loader2 className="h-5 w-5 animate-spin" />
                                             {language === 'ar' ? 'جاري الحفظ...' : 'Saving...'}
@@ -464,138 +599,158 @@ export default function EventsManagement() {
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
                 {/* Desktop Table View */}
                 <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full text-left border-collapse" dir={dir}>
-                        <thead>
-                            <tr className="bg-gray-50/50 border-b border-gray-50 text-gray-500 font-bold uppercase text-[10px] tracking-wider">
-                                <th className="px-6 py-4">{language === "ar" ? "الفعالية" : "Event"}</th>
-                                <th className="px-6 py-4">{language === "ar" ? "التاريخ" : "Date"}</th>
-                                <th className="px-6 py-4">{language === "ar" ? "المكان" : "Venue"}</th>
-                                <th className="px-6 py-4">{language === "ar" ? "السعر" : "Price"}</th>
-                                <th className="px-6 py-4">{language === "ar" ? "الحالة" : "Status"}</th>
-                                <th className="px-6 py-4 text-right">{language === "ar" ? "إجراءات" : "Actions"}</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {filteredEvents.map((event) => (
-                                <tr key={event.id} className="hover:bg-gray-50/50 transition-colors group">
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-4">
-                                            <img src={event.image} alt="" className="h-10 w-16 object-cover rounded-xl shadow-sm" />
-                                            <div className="min-w-0">
-                                                <p className="font-bold text-gray-900 truncate max-w-[200px]">{event.title}</p>
-                                                <p className="text-[10px] text-gray-400 uppercase font-black">{event.type}</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2 text-gray-600">
-                                            <Calendar className="h-4 w-4" />
-                                            <span className="text-sm">{event.date}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2 text-gray-600">
-                                            <MapPin className="h-4 w-4" />
-                                            <span className="text-sm truncate max-w-[150px]">{event.venue}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 font-bold text-gray-900">
-                                        {event.price} {event.currency}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${event.category === 'Sold Out' ? 'bg-red-50 text-red-600' :
-                                            event.category === 'Popular' ? 'bg-orange-50 text-orange-600' :
-                                                'bg-green-50 text-green-600'
-                                            }`}>
-                                            {event.category || (language === 'ar' ? 'نشط' : 'Active')}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex items-center justify-end gap-1">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-blue-50 hover:text-blue-600">
-                                                <Edit2 className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8 rounded-full hover:bg-red-50 hover:text-red-600"
-                                                onClick={() => handleDelete(event.id)}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </td>
+                    {loading ? (
+                        <div className="flex items-center justify-center p-12 text-gray-400">
+                            <Loader2 className="h-8 w-8 animate-spin" />
+                        </div>
+                    ) : (
+                        <table className="w-full text-left border-collapse" dir={dir}>
+                            <thead>
+                                <tr className="bg-gray-50/50 border-b border-gray-50 text-gray-500 font-bold uppercase text-[10px] tracking-wider">
+                                    <th className="px-6 py-4">{language === "ar" ? "الفعالية" : "Event"}</th>
+                                    <th className="px-6 py-4">{language === "ar" ? "التاريخ" : "Date"}</th>
+                                    <th className="px-6 py-4">{language === "ar" ? "المكان" : "Venue"}</th>
+                                    <th className="px-6 py-4">{language === "ar" ? "السعر" : "Price"}</th>
+                                    <th className="px-6 py-4">{language === "ar" ? "الحالة" : "Status"}</th>
+                                    <th className="px-6 py-4 text-right">{language === "ar" ? "إجراءات" : "Actions"}</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {filteredEvents.map((event) => (
+                                    <tr key={event._id} className="hover:bg-gray-50/50 transition-colors group">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-4">
+                                                <img src={event.image} alt="" className="h-10 w-16 object-cover rounded-xl shadow-sm" />
+                                                <div className="min-w-0">
+                                                    <p className="font-bold text-gray-900 truncate max-w-[200px]">{event.title[language]}</p>
+                                                    <p className="text-[10px] text-gray-400 uppercase font-black">{event.type}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2 text-gray-600">
+                                                <Calendar className="h-4 w-4" />
+                                                <span className="text-sm">
+                                                    {event.showTimes?.[0]?.date
+                                                        ? new Date(event.showTimes[0].date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')
+                                                        : '-'}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2 text-gray-600">
+                                                <MapPin className="h-4 w-4" />
+                                                <span className="text-sm truncate max-w-[150px]">{event.venueId?.name?.[language]}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 font-bold text-gray-900">
+                                            {event.pricing?.[0]?.price} {event.currency}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${event.status === 'soldOut' ? 'bg-red-50 text-red-600' :
+                                                event.status === 'draft' ? 'bg-gray-50 text-gray-600' :
+                                                    'bg-green-50 text-green-600'
+                                                }`}>
+                                                {event.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-blue-50 hover:text-blue-600">
+                                                    <Edit2 className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 rounded-full hover:bg-red-50 hover:text-red-600"
+                                                    onClick={() => handleDelete(event._id)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
 
                 {/* Mobile List View */}
                 <div className="md:hidden divide-y divide-gray-50">
-                    {filteredEvents.map((event) => (
-                        <div key={event.id} className="p-4 space-y-4">
-                            <div className="flex gap-4">
-                                <img src={event.image} alt="" className="h-16 w-16 object-cover rounded-2xl shadow-sm" />
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-start justify-between">
-                                        <div>
-                                            <h3 className="font-bold text-gray-900 truncate leading-tight mb-1">{event.title}</h3>
-                                            <p className="text-[10px] text-gray-400 uppercase font-black">{event.type}</p>
+                    {loading ? (
+                        <div className="flex items-center justify-center p-12 text-gray-400">
+                            <Loader2 className="h-8 w-8 animate-spin" />
+                        </div>
+                    ) : (
+                        filteredEvents.map((event) => (
+                            <div key={event._id} className="p-4 space-y-4">
+                                <div className="flex gap-4">
+                                    <img src={event.image} alt="" className="h-16 w-16 object-cover rounded-2xl shadow-sm" />
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-start justify-between">
+                                            <div>
+                                                <h3 className="font-bold text-gray-900 truncate leading-tight mb-1">{event.title[language]}</h3>
+                                                <p className="text-[10px] text-gray-400 uppercase font-black">{event.type}</p>
+                                            </div>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg -mt-1 text-gray-400">
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="rounded-2xl border-gray-100 p-2 min-w-[160px]">
+                                                    <DropdownMenuItem className="gap-3 py-3 rounded-xl focus:bg-gray-50 cursor-pointer text-sm font-medium">
+                                                        <Edit2 className="h-4 w-4 text-gray-400" />
+                                                        {language === 'ar' ? 'تعديل' : 'Edit'}
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem className="gap-3 py-3 rounded-xl focus:bg-gray-50 cursor-pointer text-sm font-medium">
+                                                        <Eye className="h-4 w-4 text-gray-400" />
+                                                        {language === 'ar' ? 'مشاهدة' : 'View'}
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        className="gap-3 py-3 rounded-xl focus:bg-red-50 focus:text-red-600 cursor-pointer text-sm font-medium text-red-600"
+                                                        onClick={() => handleDelete(event._id)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                        {language === 'ar' ? 'حذف' : 'Delete'}
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg -mt-1 text-gray-400">
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="rounded-2xl border-gray-100 p-2 min-w-[160px]">
-                                                <DropdownMenuItem className="gap-3 py-3 rounded-xl focus:bg-gray-50 cursor-pointer text-sm font-medium">
-                                                    <Edit2 className="h-4 w-4 text-gray-400" />
-                                                    {language === 'ar' ? 'تعديل' : 'Edit'}
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="gap-3 py-3 rounded-xl focus:bg-gray-50 cursor-pointer text-sm font-medium">
-                                                    <Eye className="h-4 w-4 text-gray-400" />
-                                                    {language === 'ar' ? 'مشاهدة' : 'View'}
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    className="gap-3 py-3 rounded-xl focus:bg-red-50 focus:text-red-600 cursor-pointer text-sm font-medium text-red-600"
-                                                    onClick={() => handleDelete(event.id)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                    {language === 'ar' ? 'حذف' : 'Delete'}
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
                                     </div>
                                 </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3 text-xs">
-                                <div className="flex items-center gap-2 text-gray-500 bg-gray-50 p-2 rounded-xl">
-                                    <Calendar className="h-3 w-3" />
-                                    <span className="truncate">{event.date}</span>
+                                <div className="grid grid-cols-2 gap-3 text-xs">
+                                    <div className="flex items-center gap-2 text-gray-500 bg-gray-50 p-2 rounded-xl">
+                                        <Calendar className="h-3 w-3" />
+                                        <span className="truncate">
+                                            {event.showTimes?.[0]?.date
+                                                ? new Date(event.showTimes[0].date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')
+                                                : '-'}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-gray-500 bg-gray-50 p-2 rounded-xl">
+                                        <MapPin className="h-3 w-3" />
+                                        <span className="truncate">{event.venueId?.name?.[language]}</span>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2 text-gray-500 bg-gray-50 p-2 rounded-xl">
-                                    <MapPin className="h-3 w-3" />
-                                    <span className="truncate">{event.venue}</span>
+                                <div className="flex items-center justify-between pt-2">
+                                    <p className="font-black text-gray-900">{event.pricing?.[0]?.price} {event.currency}</p>
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${event.status === 'soldOut' ? 'bg-red-50 text-red-600' :
+                                        event.status === 'draft' ? 'bg-gray-50 text-gray-600' :
+                                            'bg-green-50 text-green-600'
+                                        }`}>
+                                        {event.status}
+                                    </span>
                                 </div>
                             </div>
-                            <div className="flex items-center justify-between pt-2">
-                                <p className="font-black text-gray-900">{event.price} {event.currency}</p>
-                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${event.category === 'Sold Out' ? 'bg-red-50 text-red-600' :
-                                    event.category === 'Popular' ? 'bg-orange-50 text-orange-600' :
-                                        'bg-green-50 text-green-600'
-                                    }`}>
-                                    {event.category || (language === 'ar' ? 'نشط' : 'Active')}
-                                </span>
-                            </div>
-                        </div>
-                    ))}
+                        ))
+                    )}
                 </div>
 
                 {/* Pagination */}
                 <div className="p-4 md:p-6 border-t border-gray-50 flex flex-col sm:flex-row items-center justify-between gap- gap-4 text-sm text-gray-500">
-                    <p className="text-xs md:text-sm">{language === 'ar' ? 'عرض 1-10 من 24' : 'Showing 1-10 of 24'}</p>
+                    <p className="text-xs md:text-sm">{language === 'ar' ? `عرض 1-${events.length} من ${events.length}` : `Showing 1-${events.length} of ${events.length}`}</p>
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                         <Button variant="outline" size="sm" className="flex-1 sm:flex-none h-9 rounded-xl" disabled>{language === 'ar' ? 'السابق' : 'Prev'}</Button>
                         <Button variant="outline" size="sm" className="flex-1 sm:flex-none h-9 rounded-xl">{language === 'ar' ? 'التالي' : 'Next'}</Button>

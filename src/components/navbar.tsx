@@ -36,12 +36,16 @@ export function Navbar() {
     const fetchCity = async () => {
       try {
         const response = await fetch("https://ipapi.co/json/");
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
         if (data.city) {
           setUserCity(data.city);
         }
       } catch (error) {
-        console.error("Error fetching location:", error);
+        // Log error only in development if needed, but handle gracefully for user
+        console.warn("Location fetch failed, using default:", error);
         setUserCity("Dubai"); // Fallback
       }
     };
@@ -70,7 +74,7 @@ export function Navbar() {
 
         {/* LEFT SIDE: Capsule with Menu and Profile */}
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2 group">
             <Image
               src="/pl-logo-desktop-ar.svg"
@@ -80,6 +84,13 @@ export function Navbar() {
               className="h-6 w-auto transition-all  brightness-200"
             />
           </Link>
+
+          {/* Desktop City Selector */}
+          <div className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full border border-white/20 cursor-pointer transition-all group/city">
+            <MapPin className="w-4 h-4 text-white/70 group-hover/city:text-white" />
+            <span className="text-white font-bold text-sm tracking-tight">{userCity}</span>
+            <ChevronRight className="w-4 h-4 text-white/50 group-hover/city:text-white rotate-90" />
+          </div>
         </div>
         {/* RIGHT SIDE: Logo */}
         <div className="flex items-center gap-1 p-1 rounded-full transition-colors bg-white/20 backdrop-blur-md border border-white/20">
@@ -105,6 +116,7 @@ export function Navbar() {
               </Button>
             </SheetTrigger>
             <SheetContent side={language === "ar" ? "right" : "left"} className="bg-white p-0 w-full border-none">
+              <SheetTitle className="sr-only">Menu</SheetTitle>
               <div className="flex flex-col h-full bg-white">
                 {/* Mobile Header */}
                 <div className="flex items-center justify-between p-4 border-b">

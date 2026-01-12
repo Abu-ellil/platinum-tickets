@@ -2,10 +2,10 @@
 
 import { useState, useCallback } from "react";
 import { PlatinumStageMap } from "@/components/platinum-stage-map";
-import { PLATINUM_STAGE, STAGE_CATEGORIES } from "@/lib/platinum-stage-data";
+import { MANAMA_AMPHITHEATER, MANAMA_CATEGORIES } from "@/lib/manama-amphitheater-data";
 import { Seat } from "@/lib/types";
 
-export default function StageDemoPage() {
+export default function ManamaStagePage() {
     const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
 
     const handleSeatSelect = useCallback((seat: Seat) => {
@@ -22,18 +22,18 @@ export default function StageDemoPage() {
             {/* Header */}
             <div className="px-6 py-8 text-center">
                 <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-                    حفل عبير نعمة
+                    حفل الفنان ماجد المهندس
                 </h1>
                 <p className="text-slate-300 text-sm">
-                    U VENUE • الجمعة 23 يناير، 19:30
+                    مسرح بيون الدانة • الخميس 22 يناير 2026
                 </p>
             </div>
 
             {/* Stage Map Container */}
             <div className="max-w-5xl mx-auto px-4 pb-8">
                 <PlatinumStageMap
-                    theater={PLATINUM_STAGE}
-                    categories={STAGE_CATEGORIES}
+                    theater={MANAMA_AMPHITHEATER}
+                    categories={MANAMA_CATEGORIES}
                     selectedSeats={selectedSeats}
                     onSeatSelect={handleSeatSelect}
                 />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Ticket, Compass, Star, Music, Sparkles } from "lucide-react";
+import { Search, Ticket, Compass, Star, Music, Sparkles, Calendar } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
 
 const WORDS_EN = ["Events", "NightLife", "Attractions"];
@@ -69,6 +69,15 @@ export function HeroSection() {
               placeholder={t("search_placeholder")}
               className="w-full h-full bg-transparent border-none outline-none text-white placeholder:text-white/70 text-lg px-4 font-medium"
             />
+
+            {/* Date Search (added to match Platinumlist) */}
+            <div className="hidden md:flex items-center gap-2 px-6 border-l border-white/10 cursor-pointer hover:bg-white/5 transition-colors h-full group/date">
+              <Calendar className="w-5 h-5 text-white/80 group-hover/date:text-white transition-colors" />
+              <span className="text-white/70 text-sm font-medium whitespace-nowrap">
+                {language === 'ar' ? 'أي تاريخ' : 'Any Date'}
+              </span>
+            </div>
+
             {/* Left side Sparkle/Beta (from Image 0) */}
             <div className="pl-6 pr-3 flex items-center gap-1.5 border-r border-white/10">
               <div className="bg-[#9fffad p-1.5 rounded-full">

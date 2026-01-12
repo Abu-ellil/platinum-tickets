@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Event from '@/models/Event';
+import Venue from '@/models/Venue';
+import City from '@/models/City';
 
 // GET /api/events - List all events
 export async function GET(request: NextRequest) {
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching events:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch events' },
+      { success: false, error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

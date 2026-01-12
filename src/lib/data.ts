@@ -121,5 +121,16 @@ export const EVENTS: Event[] = [
     image: "https://images.unsplash.com/photo-1513889961551-628c1e5e2ee9?w=800&auto=format&fit=crop",
     category: "Popular",
     type: "attraction",
+  },
+  {
+    id: "4451579",
+    title: "حفل الفنان ماجد المهندس",
+    date: "22 يناير 2026",
+    venue: "مسرح بيون الدانة",
+    price: 2596,
+    currency: "EGP",
+    image: "https://images.unsplash.com/photo-1549833284-6a7df91c1f65?w=800&auto=format&fit=crop",
+    category: "New",
+    type: "concert",
   }
 ] as Event[];

@@ -24,6 +24,12 @@ export interface IEvent extends Document {
   status: 'active' | 'soldOut' | 'cancelled' | 'draft';
   type: 'concert' | 'theater' | 'adventure' | 'festival' | 'comedy' | 'attraction' | 'sports';
   featured: boolean;
+  rating?: number;
+  originalPrice?: number;
+  statusBadge?: {
+    ar: string;
+    en: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -61,6 +67,12 @@ const EventSchema = new Schema<IEvent>(
       default: 'concert',
     },
     featured: { type: Boolean, default: false },
+    rating: { type: Number, default: 4.5 },
+    originalPrice: { type: Number },
+    statusBadge: {
+      ar: { type: String },
+      en: { type: String },
+    },
   },
   { timestamps: true }
 );

@@ -1,8 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
-import { Theater, Seat as SeatType, Section, StageCategory } from "@/lib/types";
-import { STAGE_CATEGORIES } from "@/lib/platinum-stage-data";
+import { Theater, Seat as SeatType, Section, StageCategory, CategoryConfig } from "@/lib/types";
 import { StageSeat } from "./stage-seat";
 import { StageSection } from "./stage-section";
 import { PriceLegend } from "./price-legend";
@@ -10,18 +9,19 @@ import { Plus, Minus, ZoomIn } from "lucide-react";
 
 interface PlatinumStageMapProps {
     theater: Theater;
+    categories: Record<string, CategoryConfig>;
     selectedSeats: string[];
     onSeatSelect: (seat: SeatType) => void;
 }
 
-export function PlatinumStageMap({ theater, selectedSeats, onSeatSelect }: PlatinumStageMapProps) {
+export function PlatinumStageMap({ theater, categories, selectedSeats, onSeatSelect }: PlatinumStageMapProps) {
     const svgRef = useRef<SVGSVGElement>(null);
     const [zoom, setZoom] = useState(1);
     const [pan, setPan] = useState({ x: 0, y: 0 });
     const [isZoomed, setIsZoomed] = useState(false);
     const [zoomedSection, setZoomedSection] = useState<string | null>(null);
     const [activeCategories, setActiveCategories] = useState<StageCategory[]>(
-        Object.keys(STAGE_CATEGORIES) as StageCategory[]
+        Object.keys(categories) as StageCategory[]
     );
 
     // Zoom controls
@@ -198,6 +198,7 @@ export function PlatinumStageMap({ theater, selectedSeats, onSeatSelect }: Plati
 
             {/* Price Legend */}
             <PriceLegend
+                categories={categories}
                 onCategoryToggle={handleCategoryToggle}
                 activeCategories={activeCategories}
             />
