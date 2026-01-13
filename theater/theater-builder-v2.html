@@ -633,6 +633,59 @@
             border-radius: 3px;
         }
 
+
+        /* View Modes (LOD) */
+        .view-mode-overview .seat-row {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .view-mode-overview .section-border-path {
+            fill-opacity: 0.8 !important;
+            /* Strong overlay when zoomed out */
+            stroke-width: 0;
+            /* Optional: hide stroke in overview if desired, or keep */
+        }
+
+        /* Show section name bigger in overview? Optional but nice */
+        .view-mode-overview .section-label {
+            opacity: 0;
+            /* Hide small label in overview, use centered text instead */
+        }
+
+        .section-overlay-text {
+            fill: white;
+            font-family: 'Cairo', sans-serif;
+            font-weight: 700;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            opacity: 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .view-mode-overview .section-overlay-text {
+            opacity: 1;
+        }
+
+        .view-mode-detail .seat-row {
+            opacity: 1;
+        }
+
+        .view-mode-detail .section-border-path {
+            fill-opacity: 0 !important;
+            /* Hide overlay when zoomed in */
+        }
+
+        .seat-row {
+            transition: opacity 0.3s ease;
+        }
+
+        .section-border-path {
+            transition: fill-opacity 0.3s ease, stroke-width 0.3s;
+        }
+
         @media (max-width: 900px) {
             .main-container {
                 grid-template-columns: 1fr;
@@ -649,7 +702,8 @@
         </div>
         <div class="header-actions">
             <button class="btn btn-secondary" onclick="clearAll()">🗑️ مسح</button>
-            <button class="btn btn-secondary" onclick="exportData()">📥 تصدير</button>
+            <button class="btn btn-secondary" onclick="exportData()">📥 تصدير JSON</button>
+            <button class="btn btn-secondary" onclick="exportTsx()">⚛️ تصدير TSX</button>
             <button class="btn btn-primary" onclick="previewTheater()">👁️ معاينة</button>
         </div>
     </header>
@@ -702,7 +756,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">ميلان: <span id="skewVal">0</span>°</label>
-                        <input type="range" id="sectionSkew" min="-1000" max="1000" value="0"
+                        <input type="range" id="sectionSkew" min="-100" max="100" value="0"
                             oninput="updateSkewPreview()">
                     </div>
                 </div>
@@ -808,6 +862,9 @@
                 <button class="tool-btn" onclick="triggerBgUpload()" title="تغيير الخلفية">🖼️ خلفية</button>
                 <button class="tool-btn" onclick="clearBackground()" title="مسح الخلفية">❌</button>
                 <div style="width:1px;background:rgba(255,255,255,0.2);margin:0 5px"></div>
+                <button class="tool-btn" onclick="undo()" id="undoBtn" title="تراجع (Ctrl+Z)" disabled>↩️</button>
+                <button class="tool-btn" onclick="redo()" id="redoBtn" title="إعادة (Ctrl+Y)" disabled>↪️</button>
+                <div style="width:1px;background:rgba(255,255,255,0.2);margin:0 5px"></div>
                 <button class="tool-btn" onclick="changeZoom(-0.1)">➖</button>
                 <button class="tool-btn" onclick="changeZoom(0.1)">➕</button>
                 <button class="tool-btn" onclick="resetZoom()" title="Reset Zoom">🔍</button>
@@ -850,6 +907,100 @@
         let currentTool = 'select';
         let draggedItem = null;
         let zoomLevel = 1;
+        let canvasPan = { x: 0, y: 0 };
+        let isPanning = false;
+        let panStart = { x: 0, y: 0 };
+
+        // History
+        const historyStack = [];
+        let historyIndex = -1;
+        const MAX_HISTORY = 50;
+
+        function saveState() {
+            // Remove future states if we are in the middle of history
+            if (historyIndex < historyStack.length - 1) {
+                historyStack.splice(historyIndex + 1);
+            }
+
+            // Push deep copy of current sections
+            historyStack.push(JSON.stringify(sections));
+
+            // Limit stack size
+            if (historyStack.length > MAX_HISTORY) {
+                historyStack.shift();
+            } else {
+                historyIndex++;
+            }
+
+            updateUndoRedoButtons();
+        }
+
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                // If at end, save current state as "redo" potential before undoing? 
+                // Standard undo/redo usually implies we are just traversing the stack.
+                // But wait, the current live state might not be in the stack yet if we didn't save it.
+                // Actually, typical implementation: initial state is index 0.
+
+                sections = JSON.parse(historyStack[historyIndex]);
+
+                // Clear selection if it no longer exists
+                if (selectedSectionId && !sections.find(s => s.id === selectedSectionId)) {
+                    selectedSectionId = null;
+                    editingSection = null;
+                    resetForm();
+                }
+
+                // Re-render
+                renderSections();
+                renderCanvas();
+
+                // Update storage explicitly without triggering saveState again
+                localStorage.setItem('theaterBuilderData', JSON.stringify({
+                    theaterName: document.getElementById('theaterName').value,
+                    sections: sections
+                }));
+
+                updateUndoRedoButtons();
+            }
+        }
+
+        function redo() {
+            if (historyIndex < historyStack.length - 1) {
+                historyIndex++;
+                sections = JSON.parse(historyStack[historyIndex]);
+
+                renderSections();
+                renderCanvas();
+
+                localStorage.setItem('theaterBuilderData', JSON.stringify({
+                    theaterName: document.getElementById('theaterName').value,
+                    sections: sections
+                }));
+
+                updateUndoRedoButtons();
+            }
+        }
+
+        function updateUndoRedoButtons() {
+            document.getElementById('undoBtn').disabled = historyIndex <= 0;
+            document.getElementById('redoBtn').disabled = historyIndex >= historyStack.length - 1;
+            document.getElementById('undoBtn').style.opacity = historyIndex <= 0 ? 0.5 : 1;
+            document.getElementById('redoBtn').style.opacity = historyIndex >= historyStack.length - 1 ? 0.5 : 1;
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                undo();
+            }
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) {
+                e.preventDefault();
+                redo();
+            }
+        });
 
         const categories = {
             vip: { color: "#ef4444", price: 10673.52, label: "VIP" },
@@ -1044,6 +1195,7 @@
 
         // Save section (add or update)
         function saveSection() {
+            saveState(); // Record before change
             const name = document.getElementById('sectionName').value.trim() || `Section ${sections.length + 1}`;
             const color = document.getElementById('sectionColor').value;
             const price = parseFloat(document.getElementById('sectionPrice').value) || 0;
@@ -1197,6 +1349,7 @@
                         <div class="section-name">${s.name}</div>
                         <div class="section-details">${s.rows.length} صف • ${s.price ? '$' + s.price : 'مجاني'}</div>
                     </div>
+                    <button class="icon-btn" onclick="event.stopPropagation();duplicateSection(${s.id})" title="نسخ">❐</button>
                     <button class="icon-btn" onclick="event.stopPropagation();editSection(${s.id})">✏️</button>
                     <button class="icon-btn delete" onclick="event.stopPropagation();deleteSection(${s.id})">✕</button>
                 </div>
@@ -1235,6 +1388,7 @@
                 sections.splice(destIndex, 0, item);
 
                 // Re-render
+                saveState();
                 renderSections();
                 renderCanvas();
                 saveToStorage();
@@ -1253,6 +1407,7 @@
             renderSections();
             renderCanvas();
             editSection(id);
+            zoomToSection(id);
 
             const section = sections.find(s => s.id === id);
             if (section) {
@@ -1262,13 +1417,68 @@
             }
         }
 
+        function zoomToSection(id) {
+            const section = sections.find(s => s.id === id);
+            if (!section) return;
+
+            const container = document.getElementById('theaterLayout');
+            const cw = container.clientWidth;
+            const ch = container.clientHeight;
+            const targetZoom = 1.5;
+
+            // Math for transform-origin: top center
+            // px = -(sx - cw/2) * Z
+            // py = ch/2 - sy * Z
+            // We adding a slight offset to Y to account for sidebar/header visually if needed, but centering is fine.
+
+            // Adjust to center on the section's center (approximate width 100-200px?)
+            // Let's assume section center is section.x, section.y for now as we don't have exact center easily.
+            // Or better, use getBoundingClientRect relative to container? but container is transformed.
+            // Using raw x/y is safest "anchor" point.
+
+            const newPanX = -1 * (section.x - cw / 2) * targetZoom;
+            const newPanY = (ch / 2) - (section.y * targetZoom);
+
+            // Animate values? For now instant snap.
+            zoomLevel = targetZoom;
+            canvasPan = { x: newPanX, y: newPanY };
+            renderCanvas();
+        }
+
         // Delete section
         function deleteSection(id) {
-            sections = sections.filter(s => s.id !== id);
-            if (selectedSectionId === id) selectedSectionId = null;
-            if (editingSection === id) resetForm();
+            if (confirm('هل أنت متأكد من حذف هذا القسم؟')) {
+                sections = sections.filter(s => s.id !== id);
+                if (selectedSectionId === id) selectedSectionId = null;
+                if (editingSection === id) resetForm();
+                saveState();
+                renderSections();
+                renderCanvas();
+            }
+        }
+
+        // Duplicate section
+        function duplicateSection(id) {
+            const section = sections.find(s => s.id === id);
+            if (!section) return;
+
+            // Deep copy of the section
+            const newSection = JSON.parse(JSON.stringify(section));
+            newSection.id = Date.now();
+            newSection.name = section.name + ' (نسخة)';
+            newSection.x = (section.x || 0) + 20;
+            newSection.y = (section.y || 0) + 20;
+
+            // Regenerate IDs for rows to avoid conflicts
+            newSection.rows.forEach(row => {
+                row.id = Date.now() + Math.random();
+            });
+
+            sections.push(newSection);
+            saveState();
             renderSections();
             renderCanvas();
+            selectSection(newSection.id);
         }
 
         // Add row to selected section
@@ -1291,6 +1501,7 @@
             });
 
             document.getElementById('rowName').value = '';
+            saveState();
             renderRowsList();
             renderSections();
             renderCanvas();
@@ -1325,6 +1536,7 @@
             const section = sections.find(s => s.id === selectedSectionId);
             if (section) {
                 section.rows.splice(idx, 1);
+                saveState();
                 renderRowsList();
                 renderSections();
                 renderCanvas();
@@ -1352,7 +1564,7 @@
             }
 
             container.innerHTML = `
-                <div id="zoomContainer" style="transform: scale(${zoomLevel}); transform-origin: top center; width: 100%; height: 100%; position:relative">
+                <div id="zoomContainer" style="transform: translate(${canvasPan.x}px, ${canvasPan.y}px) scale(${zoomLevel}); transform-origin: top center; width: 100%; height: 100%; position:relative; cursor: ${isPanning ? 'grabbing' : 'grab'}">
                     ${bgHTML}
                     ${sections.map(section => renderSection(section)).join('')}
                 </div>
@@ -1365,10 +1577,68 @@
             });
         }
 
+        // Mouse Wheel Zoom
+        document.getElementById('theaterLayout').addEventListener('wheel', function (e) {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            changeZoom(delta);
+        }, { passive: false });
+
+        // Canvas Panning
+        const layoutEl = document.getElementById('theaterLayout');
+
+        layoutEl.addEventListener('mousedown', function (e) {
+            // Only pan if clicking directly on the container or background
+            if (e.target === layoutEl || e.target.id === 'zoomContainer' || e.target.tagName === 'IMG') {
+                isPanning = true;
+                panStart = { x: e.clientX - canvasPan.x, y: e.clientY - canvasPan.y };
+                layoutEl.style.cursor = 'grabbing';
+                if (document.getElementById('zoomContainer'))
+                    document.getElementById('zoomContainer').style.cursor = 'grabbing';
+            }
+        });
+
+        window.addEventListener('mousemove', function (e) {
+            if (!isPanning) return;
+            e.preventDefault();
+            canvasPan.x = e.clientX - panStart.x;
+            canvasPan.y = e.clientY - panStart.y;
+
+            const zoomContainer = document.getElementById('zoomContainer');
+            if (zoomContainer) {
+                // Manually update transform to avoid full re-render on every frame
+                zoomContainer.style.transform = `translate(${canvasPan.x}px, ${canvasPan.y}px) scale(${zoomLevel})`;
+            }
+        });
+
+        window.addEventListener('mouseup', function () {
+            if (isPanning) {
+                isPanning = false;
+                layoutEl.style.cursor = 'grab';
+                if (document.getElementById('zoomContainer'))
+                    document.getElementById('zoomContainer').style.cursor = 'grab';
+                saveToStorage();
+            }
+        });
+
         function changeZoom(delta) {
             zoomLevel = Math.max(0.3, Math.min(3, zoomLevel + delta));
             renderCanvas();
         }
+
+        function updateViewMode() {
+            const container = document.getElementById('theaterLayout');
+            // Threshold for switching modes
+            if (zoomLevel > 1.1) {
+                container.classList.add('view-mode-detail');
+                container.classList.remove('view-mode-overview');
+            } else {
+                container.classList.add('view-mode-overview');
+                container.classList.remove('view-mode-detail');
+            }
+        }
+
+
 
         function resetZoom() {
             zoomLevel = 1;
@@ -1382,6 +1652,7 @@
             el.addEventListener('mousedown', dragStart);
 
             function dragStart(e) {
+                e.stopPropagation(); // Prevent canvas panning
                 // Ignore if clicking a button or input inside
                 if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.classList.contains('seat')) return;
 
@@ -1423,6 +1694,7 @@
                 el.style.zIndex = 10;
                 document.removeEventListener('mousemove', drag);
                 document.removeEventListener('mouseup', dragEnd);
+                saveState(); // Save state after move
                 saveToStorage();
             }
         }
@@ -1434,6 +1706,7 @@
             const seatGap = section.seatGap || 2;
             const rowGap = section.rowGap !== undefined ? section.rowGap : 4;
             const padding = 15;
+            const expand = 20; // Expand border to reduce gaps
             const labelPadding = 25;
 
             // Calculate width for each row
@@ -1446,8 +1719,8 @@
             const totalHeight = section.rows.length * (seatSize + rowGap) + labelPadding;
 
             // Build SVG path for curved border following seat shapes
-            const svgWidth = maxWidth + padding * 2 + 50; // extra for labels
-            const svgHeight = totalHeight + padding * 2;
+            const svgWidth = maxWidth + (padding + expand) * 2 + 50;
+            const svgHeight = totalHeight + (padding + expand) * 2;
 
             // Calculate curve parameters
             const curveIntensity = (section.curve || 0) / 100;
@@ -1461,9 +1734,9 @@
             // Top edge points (first row)
             if (section.rows.length > 0) {
                 const firstRowWidth = rowWidths[0] || 60;
-                const leftX = centerX - firstRowWidth / 2 - 10;
-                const rightX = centerX + firstRowWidth / 2 + 10;
-                const topY = padding;
+                const leftX = centerX - firstRowWidth / 2 - 10 - expand;
+                const rightX = centerX + firstRowWidth / 2 + 10 + expand;
+                const topY = padding - expand;
 
                 // Apply curve to top
                 const topCurveOffset = curveIntensity * 15;
@@ -1476,7 +1749,7 @@
             section.rows.forEach((row, i) => {
                 const rowWidth = rowWidths[i] || 60;
                 const y = padding + labelPadding + i * (seatSize + rowGap);
-                const rightX = centerX + rowWidth / 2 + 10;
+                const rightX = centerX + rowWidth / 2 + 10 + expand;
                 const curveOffset = curveIntensity * 15;
                 pathPoints.push({ x: rightX, y: y - curveOffset, type: 'right' });
             });
@@ -1484,9 +1757,9 @@
             // Bottom edge
             if (section.rows.length > 0) {
                 const lastRowWidth = rowWidths[rowWidths.length - 1] || 60;
-                const bottomY = padding + totalHeight;
-                const leftX = centerX - lastRowWidth / 2 - 10;
-                const rightX = centerX + lastRowWidth / 2 + 10;
+                const bottomY = padding + totalHeight + expand;
+                const leftX = centerX - lastRowWidth / 2 - 10 - expand;
+                const rightX = centerX + lastRowWidth / 2 + 10 + expand;
                 const curveOffset = curveIntensity * 15;
 
                 pathPoints.push({ x: rightX, y: bottomY - curveOffset, type: 'bottom-right' });
@@ -1498,7 +1771,7 @@
             for (let i = section.rows.length - 1; i >= 0; i--) {
                 const rowWidth = rowWidths[i] || 60;
                 const y = padding + labelPadding + i * (seatSize + rowGap);
-                const leftX = centerX - rowWidth / 2 - 10;
+                const leftX = centerX - rowWidth / 2 - 10 - expand;
                 const curveOffset = curveIntensity * 15;
                 pathPoints.push({ x: leftX, y: y - curveOffset, type: 'left' });
             }
@@ -1524,15 +1797,17 @@
 
             const transformStyle = transforms.length > 0 ? `transform: ${transforms.join(' ')};` : '';
 
-            // Border rendering logic
-            let borderSVG = '';
-            if (section.hasBorder !== false) {
-                borderSVG = `
-                    <svg width="${svgWidth}" height="${svgHeight}" style="position:absolute;top:-15px;left:50%;transform:translateX(-50%);pointer-events:none;overflow:visible">
-                        <path d="${pathD}" fill="none" stroke="${section.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                `;
-            }
+            // Border/Overlay rendering logic
+            const showBorder = section.hasBorder !== false;
+            const strokeVal = showBorder ? section.color : 'none';
+            // Scale font size based on zoom? CSS will handle opacity.
+
+            const borderSVG = `
+                <svg width="${svgWidth}" height="${svgHeight}" style="position:absolute;top:-15px;left:50%;transform:translateX(-50%);overflow:visible">
+                    <path class="section-border-path" d="${pathD}" fill="${section.color}" fill-opacity="0.2" stroke="${strokeVal}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    <text x="${svgWidth / 2}" y="${svgHeight / 2}" class="section-overlay-text" font-size="${Math.max(20, svgWidth / 10)}">${section.name}</text>
+                </svg>
+            `;
 
             return `
                 <div id="section-${section.id}" 
@@ -1611,31 +1886,36 @@
 
             return `
                 <div class="seat ${statusClass}"
+                     data-original-color="${section.color}"
+                     data-price="${section.price || 0}"
                      style="width:${seatSize}px; height:${seatSize}px; font-size:${fontSize}px; background:${background}; border:${border}; color:${color}; ${transform}"
-                     onclick="event.stopPropagation();handleSeatClick(${section.id}, ${row.id}, ${seat.number})"
-                     title="صف ${row.name} - مقعد ${seat.number}">
+                     onclick="handleSeatClick(event, ${section.id}, ${row.id}, ${seat.number})"
+                     title="صف ${row.name} - مقعد ${seat.number} (${section.price || 0})">
                     ${content}
                 </div>
             `;
         }
 
-        function handleSeatClick(sectionId, rowId, seatNum) {
-            const section = sections.find(s => s.id === sectionId);
-            if (!section) return;
-            const row = section.rows.find(r => r.id === rowId);
-            if (!row) return;
-            const seat = row.seats.find(s => s.number === seatNum);
-            if (!seat) return;
+        function handleSeatClick(e, sectionId, rowId, seatNum) {
+            if (currentTool === 'skip' || currentTool === 'pin') {
+                e.stopPropagation(); // Stop selection of section
+                const section = sections.find(s => s.id === sectionId);
+                if (!section) return;
+                const row = section.rows.find(r => r.id === rowId);
+                if (!row) return;
+                const seat = row.seats.find(s => s.number === seatNum);
+                if (!seat) return;
 
-            if (currentTool === 'skip') {
-                seat.status = seat.status === 'skipped' ? 'available' : 'skipped';
-            } else if (currentTool === 'pin') {
-                seat.status = seat.status === 'pinned' ? 'available' : 'pinned';
-            } else {
-                seat.status = seat.status === 'selected' ? 'available' : 'selected';
+                if (currentTool === 'skip') {
+                    seat.status = seat.status === 'skipped' ? 'available' : 'skipped';
+                } else if (currentTool === 'pin') {
+                    seat.status = seat.status === 'pinned' ? 'available' : 'pinned';
+                }
+                saveState(); // Save seat status change
+                renderCanvas();
             }
-
-            renderCanvas();
+            // If tool is 'select', we allow the event to bubble up to the section, 
+            // which triggers selectSection(id). We do NOT toggle seat status in builder.
         }
 
         function setTool(tool) {
@@ -1659,7 +1939,9 @@
         function saveToStorage() {
             const data = {
                 theaterName: document.getElementById('theaterName').value,
-                sections: sections
+                sections: sections,
+                canvasPan: canvasPan,
+                zoomLevel: zoomLevel
             };
             localStorage.setItem('theaterBuilderData', JSON.stringify(data));
         }
@@ -1671,6 +1953,8 @@
                     const data = JSON.parse(saved);
                     sections = data.sections || [];
                     document.getElementById('theaterName').value = data.theaterName || '';
+                    if (data.canvasPan) canvasPan = data.canvasPan;
+                    if (data.zoomLevel) zoomLevel = data.zoomLevel;
                     renderSections();
                     renderCanvas();
                 }
@@ -1683,6 +1967,7 @@
         const originalRenderCanvas = renderCanvas;
         renderCanvas = function () {
             originalRenderCanvas();
+            updateViewMode(); // Ensure mode is correct after render
             saveToStorage();
         };
 
@@ -1693,6 +1978,7 @@
                 editingSection = null;
                 localStorage.removeItem('theaterBuilderData');
                 resetForm();
+                saveState();
                 renderSections();
                 renderCanvas();
             }
@@ -1704,6 +1990,387 @@
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = 'theater-layout.json';
+            a.click();
+        }
+
+        function exportTsx() {
+            // Pre-calculate geometry for each section to simplify the React component
+            const processingSections = sections.map(s => {
+                const section = JSON.parse(JSON.stringify(s));
+                const seatSize = section.seatSize || 18;
+                const seatGap = section.seatGap || 2;
+                const rowGap = section.rowGap !== undefined ? section.rowGap : 4;
+                const padding = 15;
+                const expand = 20; // Match renderSection logical expansion
+                const labelPadding = 25;
+
+                const rowWidths = section.rows.map(row => {
+                    const aisles = row.aisles || 0;
+                    return row.seats.length * seatSize + (row.seats.length - 1) * seatGap + (aisles * 12);
+                });
+
+                const maxWidth = Math.max(...rowWidths, 60);
+                const totalHeight = section.rows.length * (seatSize + rowGap) + labelPadding;
+                const svgWidth = maxWidth + (padding + expand) * 2 + 50;
+                const svgHeight = totalHeight + (padding + expand) * 2;
+
+                // Geometry math (same as renderSection)
+                const curveIntensity = (section.curve || 0) / 100;
+                let pathPoints = [];
+                const centerX = svgWidth / 2;
+
+                if (section.rows.length > 0) {
+                    const firstRowWidth = rowWidths[0] || 60;
+                    const leftX = centerX - firstRowWidth / 2 - 10 - expand;
+                    const rightX = centerX + firstRowWidth / 2 + 10 + expand;
+                    const topY = padding - expand;
+                    const topCurveOffset = curveIntensity * 15;
+                    pathPoints.push({ x: leftX, y: topY - topCurveOffset });
+                    pathPoints.push({ x: centerX, y: topY });
+                    pathPoints.push({ x: rightX, y: topY - topCurveOffset });
+                }
+
+                section.rows.forEach((row, i) => {
+                    const rowWidth = rowWidths[i] || 60;
+                    const y = padding + labelPadding + i * (seatSize + rowGap);
+                    const rightX = centerX + rowWidth / 2 + 10 + expand;
+                    const curveOffset = curveIntensity * 15;
+                    pathPoints.push({ x: rightX, y: y - curveOffset });
+                });
+
+                if (section.rows.length > 0) {
+                    const lastRowWidth = rowWidths[rowWidths.length - 1] || 60;
+                    const bottomY = padding + totalHeight + expand;
+                    const leftX = centerX - lastRowWidth / 2 - 10 - expand;
+                    const rightX = centerX + lastRowWidth / 2 + 10 + expand;
+                    const curveOffset = curveIntensity * 15;
+                    pathPoints.push({ x: rightX, y: bottomY - curveOffset });
+                    pathPoints.push({ x: centerX, y: bottomY });
+                    pathPoints.push({ x: leftX, y: bottomY - curveOffset });
+                }
+
+                for (let i = section.rows.length - 1; i >= 0; i--) {
+                    const rowWidth = rowWidths[i] || 60;
+                    const y = padding + labelPadding + i * (seatSize + rowGap);
+                    const leftX = centerX - rowWidth / 2 - 10 - expand;
+                    const curveOffset = curveIntensity * 15;
+                    pathPoints.push({ x: leftX, y: y - curveOffset });
+                }
+
+                let pathD = '';
+                if (pathPoints.length > 0) {
+                    pathD = `M ${pathPoints[0].x} ${pathPoints[0].y}`;
+                    for (let i = 1; i < pathPoints.length; i++) {
+                        const prev = pathPoints[i - 1];
+                        const curr = pathPoints[i];
+                        const cpX = (prev.x + curr.x) / 2;
+                        const cpY = (prev.y + curr.y) / 2;
+                        pathD += ` Q ${prev.x} ${prev.y} ${cpX} ${cpY}`;
+                    }
+                    pathD += ' Z';
+                }
+
+                section.pathD = pathD;
+                section.svgDim = { width: svgWidth, height: svgHeight };
+                return section;
+            });
+
+            // TSX Template
+            const tsxContent = `
+import React, { useState } from 'react';
+
+// Types
+export interface Seat {
+  number: number;
+  status: 'available' | 'booked' | 'selected' | 'skipped' | 'pinned';
+}
+
+export interface Section {
+  id: number;
+  name: string;
+  color: string;
+  price: number;
+  rows: Row[];
+  x: number;
+  y: number;
+  rotation: number;
+  skew: number;
+  curve: number;
+  seatSize: number;
+  seatGap: number;
+  rowGap: number;
+  hasBorder: boolean;
+  pathD?: string;
+  svgDim?: { width: number, height: number };
+}
+
+export interface Row {
+  id: number;
+  name: string;
+  seats: Seat[];
+  aisles: number;
+}
+
+interface TheaterProps {
+  onSeatClick?: (section: Section, row: Row, seat: Seat) => void;
+  selectedSeats?: string[]; // Array of unique IDs e.g. "sec-row-seat"
+  pricing?: Record<string, number>; // Dynamic pricing map keyed by section ID
+}
+
+const THEATER_DATA: Section[] = ${JSON.stringify(processingSections, null, 2)};
+
+export const TheaterSeating: React.FC<TheaterProps> = ({ 
+  onSeatClick, 
+  selectedSeats = [],
+  pricing = {} 
+}) => {
+  const [zoom, setZoom] = useState(0.8);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  const isZoomedIn = zoom > 1.1;
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    setZoom(z => Math.max(0.3, Math.min(3, z + delta)));
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.target === containerRef.current || (e.target as HTMLElement).tagName === 'SVG' || (e.target as HTMLElement).id === 'zoom-container') {
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      setPan({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleSectionClick = (e: React.MouseEvent, section: Section) => {
+      e.stopPropagation(); // Prevent canvas drag/pan triggers
+      if (!containerRef.current) return;
+      
+      const cw = containerRef.current.clientWidth;
+      const ch = containerRef.current.clientHeight;
+      const targetZoom = 1.5;
+
+      // Center logic for transform-origin: top center
+      const newPanX = -1 * (section.x - cw / 2) * targetZoom;
+      const newPanY = (ch / 2) - (section.y * targetZoom);
+
+      setZoom(targetZoom);
+      setPan({ x: newPanX, y: newPanY });
+  };
+
+  return (
+    <div 
+        ref={containerRef}
+        className="relative w-full h-[800px] overflow-hidden bg-gray-900 rounded-xl"
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+    >
+      {/* Toolbar */}
+      <div className="absolute top-4 right-4 z-50 flex gap-2 bg-white/10 p-2 rounded-lg backdrop-blur">
+        <button onClick={() => setZoom(z => Math.min(z + 0.1, 3))} className="p-2 text-white hover:bg-white/20 rounded">+</button>
+        <button onClick={() => setZoom(z => Math.max(z - 0.1, 0.3))} className="p-2 text-white hover:bg-white/20 rounded">-</button>
+      </div>
+
+      {/* Canvas */}
+      <div 
+           id="zoom-container"
+           className="origin-top-center transition-transform duration-75 ease-out"
+           style={{ transform: \`translate(\${pan.x}px, \${pan.y}px) scale(\${zoom})\`, minHeight: '100%', width: '100%' }}>
+            
+        {THEATER_DATA.map(section => {
+          const currentPrice = pricing[section.id] ?? section.price;
+          
+          return (
+            <div 
+              key={section.id}
+              onClick={(e) => handleSectionClick(e, section)}
+              className="absolute flex flex-col items-center select-none transition-all duration-200 hover:brightness-110 cursor-pointer"
+              style={{
+                left: section.x,
+                top: section.y,
+                transform: \`skewX(\${section.skew}deg) rotate(\${section.rotation}deg)\`,
+                gap: section.rowGap
+              }}
+            >
+              {/* Section Shape (Border + Fill) */}
+              <svg 
+                  width={section.svgDim?.width} 
+                  height={section.svgDim?.height} 
+                  className="absolute overflow-visible"
+                  style={{ top: -15, left: '50%', transform: 'translateX(-50%)' }}
+                >
+                  <path 
+                    d={section.pathD} 
+                    fill={section.color}
+                    // If zoomed in: transparent fill. If zoomed out: strong opacity
+                    fillOpacity={isZoomedIn ? 0 : 0.6}
+                    stroke={section.hasBorder ? section.color : 'none'} 
+                    strokeWidth="3" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    className="transition-all duration-300"
+                  />
+                  {/* Centered Label for Overview */}
+                  <text 
+                    x={section.svgDim?.width ? section.svgDim.width / 2 : 50} 
+                    y={section.svgDim?.height ? section.svgDim.height / 2 : 50} 
+                    fill="white"
+                    fontSize={Math.max(20, (section.svgDim?.width || 0)/10)}
+                    fontWeight="bold"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    className={\`transition-opacity duration-300 pointer-events-none drop-shadow-md \${!isZoomedIn ? 'opacity-100' : 'opacity-0'}\`}
+                  >
+                    {section.name}
+                  </text>
+                </svg>
+
+              {/* Rows - Hide when zoomed out */}
+              <div 
+                className={\`relative z-10 flex flex-col items-center pt-2.5 transition-opacity duration-300 \${isZoomedIn ? 'opacity-100' : 'opacity-0'}\`} 
+                style={{ gap: section.rowGap }}
+              >
+                {section.rows.map(row => (
+                  <div key={row.id} className="flex items-center" style={{ gap: 3 }}>
+                    <span className="w-5 text-center text-[10px] font-bold text-white/50">{row.name}</span>
+                    
+                    <div className="flex justify-center" style={{ gap: section.seatGap }}>
+                      {renderRowSeats(section, row, currentPrice, onSeatClick, selectedSeats, section.seatGap)}
+                    </div>
+
+                    <span className="w-5 text-center text-[10px] font-bold text-white/50">{row.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// Helper to render seats with aisles
+function renderRowSeats(
+    section: Section, 
+    row: Row, 
+    price: number,
+    onClick: any,
+    selectedIds: string[],
+    gap: number
+) {
+  const seats = row.seats;
+  const aisles = row.aisles || 0;
+  
+  if (aisles > 0) {
+    // Group seats by aisle
+    const groups: React.ReactNode[] = [];
+    const groupSize = Math.ceil(seats.length / (aisles + 1));
+    
+    for (let i = 0; i < seats.length; i += groupSize) {
+      const chunk = seats.slice(i, i + groupSize);
+      groups.push(
+        <div key={i} className="flex" style={{ gap }}>
+          {chunk.map((seat, idx) => renderSeat(section, row, seat, i + idx, seats.length, price, onClick, selectedIds))}
+        </div>
+      );
+      if (i + groupSize < seats.length) {
+         groups.push(<div key={\`aisle-\${i}\`} style={{ width: 12 }} />);
+      }
+    }
+    return groups;
+  }
+  
+  return seats.map((seat, i) => renderSeat(section, row, seat, i, seats.length, price, onClick, selectedIds));
+}
+
+function renderSeat(
+    section: Section, 
+    row: Row, 
+    seat: Seat, 
+    index: number, 
+    total: number,
+    price: number,
+    onClick: any,
+    selectedIds: string[]
+) {
+    if (seat.status === 'skipped') {
+       return (
+         <div 
+           key={seat.number} 
+           className="rounded-sm bg-gray-700 opacity-40"
+           style={{ width: section.seatSize, height: section.seatSize }} 
+         />
+       );
+    }
+
+    const uniqueId = \`\${section.id}-\${row.id}-\${seat.number}\`;
+    const isSelected = selectedIds.includes(uniqueId) || seat.status === 'selected';
+    const isBooked = seat.status === 'booked';
+    
+    // Curve transform
+    let transform = '';
+    if (section.curve > 0) {
+        const intensity = section.curve / 100;
+        const normalized = total > 1 ? (index - (total - 1) / 2) / ((total - 1) / 2) : 0;
+        const yOffset = Math.pow(normalized, 2) * intensity * 15;
+        const rotation = normalized * intensity * 8;
+        transform = \`translateY(-\${yOffset}px) rotate(\${rotation}deg)\`;
+    }
+
+    return (
+        <div
+            key={seat.number}
+            onClick={() => !isBooked && onClick && onClick(section, row, seat)}
+            title={\`Row \${row.name} Seat \${seat.number} - \${price}\`}
+            className={\`
+                flex items-center justify-center rounded-sm text-center
+                cursor-pointer transition-transform hover:scale-125 hover:z-50
+                \${isBooked ? 'bg-gray-700 opacity-50 cursor-not-allowed' : ''}
+            \`}
+            style={{
+                width: section.seatSize,
+                height: section.seatSize,
+                fontSize: Math.max(7, Math.floor(section.seatSize * 0.4)),
+                transform,
+                backgroundColor: isSelected ? 'white' : (isBooked ? undefined : section.color),
+                border: isSelected ? \`2px solid \${section.color}\` : 'none',
+                color: isSelected ? section.color : 'white',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.2)'
+            }}
+        >
+            {isSelected ? '✓' : seat.number}
+        </div>
+    );
+}
+
+export default TheaterSeating;
+`;
+
+            const blob = new Blob([tsxContent], { type: 'text/typescript' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'TheaterSeating.tsx';
             a.click();
         }
 
@@ -1734,15 +2401,160 @@
                         }
                         /* Hide edit controls in preview if any accidentally leaked */
                         .icon-btn, .delete { display: none !important; }
+                        /* Add hover effect for seats in preview */
+                        .seat:not(.skipped):hover { transform: scale(1.2); z-index:100; cursor:pointer; }
+                        
+                        /* Sticky Footer */
+                        .booking-footer {
+                            position: fixed;
+                            bottom: 0;
+                            left: 0;
+                            width: 100%;
+                            background: white;
+                            color: #1f2937;
+                            padding: 16px 24px;
+                            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            transform: translateY(100%);
+                            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                            z-index: 1000;
+                            font-family: 'Cairo', sans-serif;
+                            border-top: 1px solid #e5e7eb;
+                        }
+                        
+                        .booking-footer.visible {
+                            transform: translateY(0);
+                        }
+
+                        .footer-info {
+                            text-align: right;
+                        }
+
+                        .total-price {
+                            font-size: 20px;
+                            font-weight: 700;
+                            color: #111827;
+                        }
+
+                        .ticket-count {
+                            font-size: 14px;
+                            color: #6b7280;
+                            display: flex;
+                            align-items: center;
+                            gap: 5px;
+                            justify-content: flex-end;
+                        }
+
+                        .next-btn {
+                            background: #1a1a2e;
+                            color: white;
+                            border: none;
+                            padding: 10px 24px;
+                            border-radius: 8px;
+                            font-size: 16px;
+                            font-weight: 700;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            gap: 12px;
+                            transition: background 0.2s;
+                        }
+
+                        .next-btn:hover {
+                            background: #2d2d44;
+                        }
+
+                        .timer-badge {
+                            background: rgba(255,255,255,0.15);
+                            padding: 4px 8px;
+                            border-radius: 6px;
+                            font-size: 14px;
+                            font-family: monospace;
+                        }
                     </style>
                 </head>
                 <body>
                     <div style="text-align:center; margin-bottom: 20px;">
                         <h1 style="color:white; margin:0;">${document.getElementById('theaterName').value || 'المسرح'}</h1>
                     </div>
-                    <div class="theater-layout" style="border:none; box-shadow:none; height: auto; min-height: 800px; overflow:visible;">
+                    
+                    <div class="theater-layout" style="border:none; box-shadow:none; height: auto; min-height: 800px; overflow:visible; padding-bottom: 100px;">
                         ${document.getElementById('theaterLayout').innerHTML}
                     </div>
+
+                    <div class="booking-footer" id="bookingFooter">
+                        <button class="next-btn">
+                            التالي
+                            <span class="timer-badge">14:59</span>
+                        </button>
+                        <div class="footer-info">
+                            <div class="ticket-count">
+                                <span>التفاصيل</span>
+                                <span style="background:#f3f4f6; padding:2px 8px; border-radius:10px; font-weight:600" id="countDisplay">x0</span>
+                                <span>🎫</span>
+                            </div>
+                            <div class="total-price">
+                                EGP <span id="priceDisplay">0.00</span> :الإجمالي
+                            </div>
+                        </div>
+                    </div>
+
+                    <script>
+                        let totalTickets = 0;
+                        let totalPrice = 0;
+
+                        // Interactivity for Preview Mode (Selection mimic)
+                        function handleSeatClick(e, secId, rowId, seatNum) {
+                            e.stopPropagation();
+                            const seat = e.target;
+                            
+                            // Ignore skipped
+                            if (seat.classList.contains('skipped')) return;
+
+                            const price = parseFloat(seat.dataset.price) || 0;
+
+                            // We use inline styles in the builder, so we need to manipulate them
+                            if (seat.dataset.selected === 'true') {
+                                // Deselect
+                                seat.dataset.selected = 'false';
+                                seat.style.background = seat.dataset.originalColor;
+                                seat.style.border = 'none';
+                                seat.style.color = 'white';
+                                seat.innerText = seatNum;
+                                
+                                totalTickets--;
+                                totalPrice -= price;
+                            } else {
+                                // Select
+                                seat.dataset.selected = 'true';
+                                seat.style.background = '#ffffff';
+                                seat.style.border = '2px solid ' + seat.dataset.originalColor;
+                                seat.style.color = seat.dataset.originalColor;
+                                seat.innerText = '✓';
+
+                                totalTickets++;
+                                totalPrice += price;
+                            }
+
+                            updateFooter();
+                        }
+
+                        function updateFooter() {
+                            const footer = document.getElementById('bookingFooter');
+                            const priceDisplay = document.getElementById('priceDisplay');
+                            const countDisplay = document.getElementById('countDisplay');
+
+                            if (totalTickets > 0) {
+                                footer.classList.add('visible');
+                                priceDisplay.textContent = totalPrice.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                                countDisplay.textContent = 'x' + totalTickets;
+                            } else {
+                                footer.classList.remove('visible');
+                            }
+                        }
+                    <\/script>
                 </body>
                 </html>
             `);
@@ -1757,6 +2569,7 @@
         updatePreview();
         setTool('select');
         loadFromStorage();
+        saveState(); // Initial state
     </script>
 </body>
 
