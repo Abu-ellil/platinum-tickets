@@ -28,13 +28,7 @@ export default function AdminLayout({
             }
 
             try {
-                // We'll check the session by calling a simple endpoint or checking cookies
-                // Since we're client-side, we can just fetch a dummy protected route
-                const res = await fetch("/api/auth/login", { method: "HEAD" });
-                // Wait, login POST only. Let's create a simple session check helper or just use a dummy fetch to protected api
-
-                // For now, let's assume if we can't get the session cookie, we're not logged in.
-                // But cookies are HttpOnly. So we need an API endpoint to check session.
+                // Check the session by calling the session endpoint
                 const sessionRes = await fetch("/api/auth/session");
                 if (!sessionRes.ok) {
                     router.push("/admin/login");

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useLanguage } from "@/lib/language-context";
 import {
     Plus,
@@ -13,7 +14,6 @@ import {
     X,
     Upload
 } from "lucide-react";
-import { ARTISTS, Artist } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,16 +21,47 @@ import {
     SheetContent,
     SheetHeader,
     SheetTitle,
+    SheetDescription,
 } from "@/components/ui/sheet";
+
+interface Artist {
+    _id: string;
+    name: {
+        ar: string;
+        en: string;
+    };
+    image: string;
+}
 
 export default function ArtistsManagement() {
     const { language } = useLanguage();
-    const [artists, setArtists] = useState<Artist[]>(ARTISTS);
+    const searchParams = useSearchParams();
+    const [artists, setArtists] = useState<Artist[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
-    const [isAddOpen, setIsAddOpen] = useState(false);
+    const [isAddOpen, setIsAddOpen] = useState(searchParams.get("add") === "true");
+
+    useEffect(() => {
+        fetchArtists();
+    }, []);
+
+    const fetchArtists = async () => {
+        try {
+            const res = await fetch('/api/artists?limit=1000');
+            const json = await res.json();
+            if (json.success) {
+                setArtists(json.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch artists:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const filteredArtists = artists.filter(artist =>
-        artist.name.toLowerCase().includes(searchTerm.toLowerCase())
+        artist.name.en.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        artist.name.ar.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const handleDelete = (id: string) => {
@@ -62,12 +93,12 @@ export default function ArtistsManagement() {
             <Sheet open={isAddOpen} onOpenChange={setIsAddOpen}>
                 <SheetContent side={language === "ar" ? "right" : "left"} className="p-0 border-none w-full sm:max-w-md">
                     <div className="flex flex-col h-full bg-white">
-                        <div className="p-6 border-b flex items-center justify-between">
-                            <h2 className="text-xl font-black">{language === 'ar' ? 'إضافة مشهور جديد' : 'Add New Artist'}</h2>
+                        <SheetHeader className="p-6 border-b flex flex-row items-center justify-between space-y-0">
+                            <SheetTitle className="text-xl font-black">{language === 'ar' ? 'إضافة مشهور جديد' : 'Add New Artist'}</SheetTitle>
                             <Button variant="ghost" size="icon" onClick={() => setIsAddOpen(false)} className="rounded-full">
                                 <X className="h-5 w-5" />
                             </Button>
-                        </div>
+                        </SheetHeader>
 
                         <div className="flex-1 overflow-y-auto p-6 space-y-6">
                             <div className="flex flex-col items-center gap-4">
@@ -126,11 +157,11 @@ export default function ArtistsManagement() {
 
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                 {filteredArtists.map((artist) => (
-                    <div key={artist.id} className="bg-white p-4 md:p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group overflow-hidden flex flex-col items-center">
+                    <div key={artist._id} className="bg-white p-4 md:p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all group overflow-hidden flex flex-col items-center">
                         <div className="relative mb-4 md:mb-6 w-20 h-20 md:w-32 md:h-32">
                             <img
                                 src={artist.image}
-                                alt={artist.name}
+                                alt={language === 'ar' ? artist.name.ar : artist.name.en}
                                 className="w-full h-full rounded-full object-cover border-4 border-gray-50 group-hover:scale-110 transition-transform duration-300"
                             />
                             <div className="absolute -bottom-1 -right-1 md:-bottom-2 md:-right-2 bg-yellow-400 text-white p-1 md:p-2 rounded-full shadow-lg">
@@ -139,8 +170,8 @@ export default function ArtistsManagement() {
                         </div>
 
                         <div className="text-center w-full min-w-0">
-                            <h3 className="text-sm md:text-xl font-bold text-gray-900 truncate leading-tight">{artist.name}</h3>
-                            <p className="text-[10px] md:text-sm text-gray-400 mt-1">ID: #{artist.id}</p>
+                            <h3 className="text-sm md:text-xl font-bold text-gray-900 truncate leading-tight">{language === 'ar' ? artist.name.ar : artist.name.en}</h3>
+                            <p className="text-[10px] md:text-sm text-gray-400 mt-1">ID: #{artist._id}</p>
                         </div>
 
                         <div className="mt-4 md:mt-6 flex items-center justify-center gap-2 w-full">
@@ -152,7 +183,7 @@ export default function ArtistsManagement() {
                                 variant="outline"
                                 size="sm"
                                 className="h-9 w-9 md:h-10 md:w-10 rounded-xl hover:bg-red-50 hover:text-red-600 border-gray-100 p-0 shrink-0"
-                                onClick={() => handleDelete(artist.id)}
+                                onClick={() => handleDelete(artist._id)}
                             >
                                 <Trash2 className="h-3.5 w-3.5" />
                             </Button>

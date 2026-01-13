@@ -1,27 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Category from '@/models/Category';
-import { FALLBACK_CATEGORIES } from '@/lib/fallback-data';
 
 // GET /api/categories - List all categories
 export async function GET() {
-  try {
-    await dbConnect();
-    
-    const categories = await Category.find({})
-      .sort({ slug: 1 })
-      .lean();
-    
-    return NextResponse.json({ success: true, data: categories });
-  } catch (error) {
-    console.error('Database connection failed, falling back to static categories data:', error);
-    
-    return NextResponse.json({ 
-      success: true, 
-      data: FALLBACK_CATEGORIES,
-      warning: 'Using static fallback data because database connection failed.'
-    });
-  }
+  await dbConnect();
+  
+  const categories = await Category.find({})
+    .sort({ slug: 1 })
+    .lean();
+  
+  return NextResponse.json({ success: true, data: categories });
 }
 
 // POST /api/categories - Create new category

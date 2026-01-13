@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useLanguage } from "@/lib/language-context";
 import {
     Plus,
@@ -20,7 +21,7 @@ import {
     Check,
     Loader2
 } from "lucide-react";
-import { VENUES_REGISTRY, getCategoryConfig } from "@/lib/venues-registry";
+
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,8 @@ import {
 import {
     Sheet,
     SheetContent,
+    SheetHeader,
+    SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet";
 
@@ -65,10 +68,11 @@ interface IEvent {
 
 export default function EventsManagement() {
     const { language, dir } = useLanguage();
+    const searchParams = useSearchParams();
     const [events, setEvents] = useState<IEvent[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
-    const [isAddOpen, setIsAddOpen] = useState(false);
+    const [isAddOpen, setIsAddOpen] = useState(searchParams.get("add") === "true");
 
     // Data for dropdowns
     const [cities, setCities] = useState<any[]>([]);
@@ -153,25 +157,19 @@ export default function EventsManagement() {
         // Find the selected venue object from API list
         const selectedApiVenue = apiVenues.find(v => v._id === venueId);
 
-        if (selectedApiVenue) {
-            // Find corresponding registry venue for config (matching by English name)
-            // This maps the dynamic DB venue to the static UI config for seating/pricing categories
-            const registryVenue = VENUES_REGISTRY.find(v => v.name.en === selectedApiVenue.name.en);
-
-            if (registryVenue) {
-                const categories = getCategoryConfig(registryVenue.theaterId);
-                const prices: CategoryPrice[] = Object.entries(categories).map(([id, config]) => ({
-                    categoryId: id,
-                    label: config.label,
-                    price: config.price,
-                    color: config.color,
-                }));
-                setCategoryPrices(prices);
-            } else {
-                // Fallback if no registry match: generic pricing or empty
-                console.warn("No registry config found for venue:", selectedApiVenue.name.en);
-                setCategoryPrices([]);
-            }
+        if (selectedApiVenue && selectedApiVenue.categories && selectedApiVenue.categories.length > 0) {
+            // Use categories from DB venue
+            const prices: CategoryPrice[] = selectedApiVenue.categories.map((cat: any) => ({
+                categoryId: cat.id,
+                label: cat.label,
+                price: cat.defaultPrice,
+                color: cat.color,
+            }));
+            setCategoryPrices(prices);
+        } else {
+            // Fallback if no categories found
+            console.warn("No categories found for venue:", selectedApiVenue?.name?.en || venueId);
+            setCategoryPrices([]);
         }
     };
 
@@ -205,28 +203,24 @@ export default function EventsManagement() {
         if (!file) return;
 
         setImageFile(file);
-        // Create preview URL
+        // Create local preview URL
         const previewUrl = URL.createObjectURL(file);
         setImageUrl(previewUrl);
-    };
 
-    // Upload image to Cloudinary
-    const handleImageUpload = async () => {
-        if (!imageFile) return;
-
+        // Immediately upload to Cloudinary
         setIsUploading(true);
         try {
-            const result = await uploadToCloudinary(imageFile);
+            const result = await uploadToCloudinary(file);
             if (result.secure_url) {
                 setImageUrl(result.secure_url);
-                return result.secure_url;
             }
         } catch (error) {
             console.error("Upload failed:", error);
+            alert(language === 'ar' ? "فشل رفع الصورة" : "Image upload failed");
+            setImageUrl(""); // Clear preview on failure
         } finally {
             setIsUploading(false);
         }
-        return null;
     };
 
     // Reset form
@@ -245,15 +239,18 @@ export default function EventsManagement() {
 
     // Save event
     const handleSaveEvent = async () => {
+        if (!imageUrl) {
+            alert(language === 'ar' ? "يرجى رفع صورة للفعالية" : "Please upload an event image");
+            return;
+        }
+
+        if (isUploading) {
+            alert(language === 'ar' ? "يرجى الانتظار حتى ينتهي رفع الصورة" : "Please wait for the image to finish uploading");
+            return;
+        }
+
         setIsSaving(true);
         try {
-            let finalImageUrl = imageUrl;
-            // Upload image first if not already uploaded
-            if (imageFile && !imageUrl.startsWith("https://res.cloudinary")) {
-                const uploadedUrl = await handleImageUpload();
-                if (uploadedUrl) finalImageUrl = uploadedUrl;
-            }
-
             // Construct payload 
             const payload = {
                 title: {
@@ -270,7 +267,7 @@ export default function EventsManagement() {
                     categoryId: cp.categoryId,
                     price: cp.price
                 })),
-                image: finalImageUrl || "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=800",
+                image: imageUrl || "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=800",
                 currency: currency,
                 status: 'active',
                 type: 'concert',
@@ -342,12 +339,12 @@ export default function EventsManagement() {
                     </SheetTrigger>
                     <SheetContent side={language === "ar" ? "right" : "left"} className="p-0 border-none w-full sm:max-w-lg overflow-hidden">
                         <div className="flex flex-col h-full bg-white">
-                            <div className="p-6 border-b flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-                                <h2 className="text-xl font-black">{language === 'ar' ? 'إضافة فعالية جديدة' : 'Add New Event'}</h2>
+                            <SheetHeader className="p-6 border-b flex flex-row items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-600 text-white space-y-0">
+                                <SheetTitle className="text-xl font-black text-white">{language === 'ar' ? 'إضافة فعالية جديدة' : 'Add New Event'}</SheetTitle>
                                 <Button variant="ghost" size="icon" onClick={() => setIsAddOpen(false)} className="rounded-full text-white hover:bg-white/20">
                                     <X className="h-5 w-5" />
                                 </Button>
-                            </div>
+                            </SheetHeader>
 
                             <div className="flex-1 overflow-y-auto p-6 space-y-6">
                                 {/* Image Upload */}
@@ -408,7 +405,7 @@ export default function EventsManagement() {
                                         <option value="">{language === 'ar' ? 'اختر المدينة...' : 'Select city...'}</option>
                                         {cities.map(city => (
                                             <option key={city._id} value={city._id}>
-                                                {language === 'ar' ? city.name.ar : city.name.en}
+                                                {language === 'ar' ? (city.name?.ar || '---') : (city.name?.en || '---')}
                                             </option>
                                         ))}
                                     </select>
@@ -434,7 +431,7 @@ export default function EventsManagement() {
                                             </option>
                                             {apiVenues.map(venue => (
                                                 <option key={venue._id} value={venue._id}>
-                                                    {language === 'ar' ? venue.name.ar : venue.name.en}
+                                                    {language === 'ar' ? (venue.name?.ar || '---') : (venue.name?.en || '---')}
                                                 </option>
                                             ))}
                                         </select>
@@ -622,7 +619,7 @@ export default function EventsManagement() {
                                             <div className="flex items-center gap-4">
                                                 <img src={event.image} alt="" className="h-10 w-16 object-cover rounded-xl shadow-sm" />
                                                 <div className="min-w-0">
-                                                    <p className="font-bold text-gray-900 truncate max-w-[200px]">{event.title[language]}</p>
+                                                    <p className="font-bold text-gray-900 truncate max-w-[200px]">{event.title?.[language] || '---'}</p>
                                                     <p className="text-[10px] text-gray-400 uppercase font-black">{event.type}</p>
                                                 </div>
                                             </div>
@@ -690,7 +687,7 @@ export default function EventsManagement() {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-start justify-between">
                                             <div>
-                                                <h3 className="font-bold text-gray-900 truncate leading-tight mb-1">{event.title[language]}</h3>
+                                                <h3 className="font-bold text-gray-900 truncate leading-tight mb-1">{event.title?.[language] || '---'}</h3>
                                                 <p className="text-[10px] text-gray-400 uppercase font-black">{event.type}</p>
                                             </div>
                                             <DropdownMenu>

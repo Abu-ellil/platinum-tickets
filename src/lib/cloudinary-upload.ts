@@ -16,25 +16,53 @@ export interface CloudinaryUploadResult {
 }
 
 export async function uploadToCloudinary(file: File): Promise<CloudinaryUploadResult> {
+  // Use a more robust way to get env vars that works in all Next.js environments
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+  if (!cloudName || !uploadPreset) {
+    console.error("Cloudinary Configuration Missing:", { cloudName, uploadPreset });
+    return {
+      secure_url: "",
+      public_id: "",
+      width: 0,
+      height: 0,
+      format: "",
+      error: "Cloudinary configuration is missing. Please check your .env file."
+    };
+  }
+
   const formData = new FormData();
+  // Important: append upload_preset BEFORE the file in some environments
+  formData.append("upload_preset", uploadPreset);
   formData.append("file", file);
-  formData.append("upload_preset", UPLOAD_PRESET);
-  formData.append("folder", "platinum-tickets/events");
+  // Optional: only append folder if it doesn't cause issues with unsigned uploads
+  // formData.append("folder", "platinum-tickets/events");
+  
+  console.log("Cloudinary Upload Attempt:", {
+    cloudName,
+    uploadPreset,
+    fileName: file.name,
+    fileType: file.type
+  });
   
   try {
     const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
       {
         method: "POST",
         body: formData,
       }
     );
     
+    const data = await response.json();
+    
     if (!response.ok) {
-      throw new Error(`Upload failed: ${response.statusText}`);
+      console.error("Cloudinary Error Response:", data);
+      throw new Error(data.error?.message || `Upload failed: ${response.statusText}`);
     }
     
-    const data = await response.json();
+    
     return {
       secure_url: data.secure_url,
       public_id: data.public_id,

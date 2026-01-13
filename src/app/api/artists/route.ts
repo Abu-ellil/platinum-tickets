@@ -1,27 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Artist from '@/models/Artist';
-import { FALLBACK_ARTISTS } from '@/lib/fallback-data';
 
 // GET /api/artists - List all artists
 export async function GET() {
-  try {
-    await dbConnect();
-    
-    const artists = await Artist.find({})
-      .sort({ 'name.en': 1 })
-      .lean();
-    
-    return NextResponse.json({ success: true, data: artists });
-  } catch (error) {
-    console.error('Database connection failed, falling back to static artists data:', error);
-    
-    return NextResponse.json({ 
-      success: true, 
-      data: FALLBACK_ARTISTS,
-      warning: 'Using static fallback data because database connection failed.'
-    });
-  }
+  await dbConnect();
+  
+  const artists = await Artist.find({})
+    .sort({ 'name.en': 1 })
+    .lean();
+  
+  return NextResponse.json({ success: true, data: artists });
 }
 
 // POST /api/artists - Create new artist

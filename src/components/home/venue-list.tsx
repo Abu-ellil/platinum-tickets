@@ -1,17 +1,36 @@
 "use client";
 
-import { VENUES } from "@/lib/data";
+import { useEffect, useState } from "react";
 import { ScrollContainer } from "@/components/ui/scroll-container";
 import Link from "next/link";
 import { MapPin } from "lucide-react";
 
+interface Venue {
+  _id: string;
+  name: { en: string; ar: string };
+  cityId: { name: { en: string; ar: string } };
+  image: string;
+}
+
 export function VenueList() {
+  const [venues, setVenues] = useState<Venue[]>([]);
+
+  useEffect(() => {
+    fetch("/api/venues")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setVenues(data.data);
+        }
+      });
+  }, []);
+
   return (
     <ScrollContainer className="gap-5 py-4">
-      {VENUES.map((venue) => (
+      {venues.map((venue) => (
         <Link 
-          key={venue.id} 
-          href={`/venues/${venue.id}`}
+          key={venue._id} 
+          href={`/venues/${venue._id}`}
           className="block group min-w-[280px] w-[280px] snap-start"
         >
           <div className="relative aspect-[3/2] rounded-xl overflow-hidden shadow-sm">
@@ -23,11 +42,11 @@ export function VenueList() {
             
             <div className="absolute bottom-0 right-0 p-4 w-full">
               <h3 className="text-lg font-bold text-white mb-1 leading-tight group-hover:text-yellow-400 transition-colors">
-                {venue.name}
+                {venue.name?.ar || ""}
               </h3>
               <div className="flex items-center text-gray-300 text-xs font-medium">
                 <MapPin className="w-3 h-3 ml-1" />
-                {venue.city}
+                {venue.cityId?.name?.ar || ""}
               </div>
             </div>
           </div>

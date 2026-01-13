@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useLanguage } from "@/lib/language-context";
 import {
     Users,
@@ -10,26 +12,60 @@ import {
     Star,
     ArrowUpRight,
     ArrowDownRight,
-    MoreHorizontal
+    MoreHorizontal,
+    PlusCircle,
+    Image as ImageIcon,
+    LayoutDashboard
 } from "lucide-react";
-import { EVENTS, ARTISTS, VENUES } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 
 export default function AdminDashboard() {
     const { language } = useLanguage();
+    const [events, setEvents] = useState<any[]>([]);
+    const [artists, setArtists] = useState<any[]>([]);
+    const [venues, setVenues] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [eventsRes, artistsRes, venuesRes] = await Promise.all([
+                    fetch('/api/events?limit=1000'),
+                    fetch('/api/artists?limit=1000'),
+                    fetch('/api/venues?limit=1000'),
+                ]);
+                
+                const [eventsJson, artistsJson, venuesJson] = await Promise.all([
+                    eventsRes.json(),
+                    artistsRes.json(),
+                    venuesRes.json(),
+                ]);
+
+                if (eventsJson.success) setEvents(eventsJson.data);
+                if (artistsJson.success) setArtists(artistsJson.data);
+                if (venuesJson.success) setVenues(venuesJson.data);
+            } catch (error) {
+                console.error("Failed to fetch dashboard data:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
 
     const stats = [
         {
             label: language === "ar" ? "الفعاليات" : "Events",
-            value: EVENTS.length,
+            value: events.length,
             change: "+12%",
             trend: "up",
             icon: Calendar,
             color: "blue"
         },
         {
-            label: language === "ar" ? "المدن" : "Cities",
-            value: VENUES.length,
+            label: language === "ar" ? "الأماكن" : "Venues",
+            value: venues.length,
             change: "+3%",
             trend: "up",
             icon: MapPin,
@@ -37,7 +73,7 @@ export default function AdminDashboard() {
         },
         {
             label: language === "ar" ? "المشاهير" : "Artists",
-            value: ARTISTS.length,
+            value: artists.length,
             change: "+5%",
             trend: "up",
             icon: Star,
@@ -53,84 +89,160 @@ export default function AdminDashboard() {
         }
     ];
 
+    const quickActions = [
+        {
+            label: language === "ar" ? "إضافة حفلة" : "Add Event",
+            icon: Calendar,
+            href: "/admin/events?add=true",
+            color: "bg-blue-600",
+            hoverColor: "hover:bg-blue-700",
+            description: language === "ar" ? "إنشاء فعالية أو حفلة جديدة" : "Create a new event or concert"
+        },
+        {
+            label: language === "ar" ? "إضافة مشهور" : "Add Artist",
+            icon: Star,
+            href: "/admin/artists?add=true",
+            color: "bg-orange-500",
+            hoverColor: "hover:bg-orange-600",
+            description: language === "ar" ? "إضافة فنان أو شخصية مشهورة" : "Add a new artist or celebrity"
+        },
+        {
+            label: language === "ar" ? "إضافة مدينة/مكان" : "Add City/Venue",
+            icon: MapPin,
+            href: "/admin/cities?add=true",
+            color: "bg-purple-600",
+            hoverColor: "hover:bg-purple-700",
+            description: language === "ar" ? "إضافة مدينة أو موقع فعاليات" : "Add a city or event venue"
+        },
+        {
+            label: language === "ar" ? "إضافة سلايد" : "Add Slide",
+            icon: ImageIcon,
+            href: "/admin/slides?add=true",
+            color: "bg-green-600",
+            hoverColor: "hover:bg-green-700",
+            description: language === "ar" ? "إضافة صورة للواجهة الرئيسية" : "Add a slide to the home hero"
+        }
+    ];
+
     return (
-        <div className="space-y-6 md:space-y-8">
-            <div>
-                <h1 className="text-2xl md:text-3xl font-black text-gray-900">
-                    {language === "ar" ? "نظرة عامة" : "Dashboard Overview"}
-                </h1>
-                <p className="text-sm md:text-base text-gray-500 mt-1">
-                    {language === "ar" ? "مرحباً بك، إليك ملخص اليوم." : "Welcome back, here's your summary."}
-                </p>
+        <div className="space-y-10 pb-10">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                    <h1 className="text-3xl md:text-5xl font-black text-gray-900 flex items-center gap-4">
+                        <LayoutDashboard className="h-10 w-10 text-blue-600" />
+                        {language === "ar" ? "لوحة التحكم" : "Admin Dashboard"}
+                    </h1>
+                    <p className="text-base md:text-lg text-gray-500 mt-3 font-medium">
+                        {language === "ar" ? "مرحباً بك، ابدأ بإضافة المحتوى أو متابعة الإحصائيات." : "Welcome back, start adding content or track your stats."}
+                    </p>
+                </div>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-                {stats.map((stat, i) => (
-                    <div key={i} className="bg-white p-4 md:p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between mb-3 md:mb-4">
-                            <div className={`p-2 md:p-3 rounded-xl md:rounded-2xl bg-${stat.color}-50 text-${stat.color}-600`}>
-                                <stat.icon className="h-4 w-4 md:h-6 md:w-6" />
+            {/* Quick Actions Grid */}
+            <div className="grid grid-cols-2 gap-4 md:gap-8">
+                {quickActions.map((action, index) => (
+                    <Link key={index} href={action.href} className="group">
+                        <div className="bg-white border-2 border-gray-100 p-8 rounded-[2.5rem] hover:border-blue-200 hover:shadow-2xl hover:shadow-blue-100/50 transition-all duration-300 h-full relative overflow-hidden flex flex-col">
+                            <div className={`${action.color} w-14 h-14 rounded-2xl flex items-center justify-center text-white mb-6 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 shadow-lg`}>
+                                <action.icon className="h-7 w-7" />
                             </div>
-                            <div className={`flex items-center gap-0.5 text-[10px] md:text-sm font-bold ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                                {stat.change}
-                                {stat.trend === 'up' ? <ArrowUpRight className="h-3 w-3 md:h-4 md:w-4" /> : <ArrowDownRight className="h-3 w-3 md:h-4 md:w-4" />}
+                            <h3 className="text-2xl font-black text-gray-900 mb-3">{action.label}</h3>
+                            <p className="text-gray-500 font-medium leading-relaxed mb-6 flex-1">{action.description}</p>
+                            <div className="flex items-center text-blue-600 font-black text-sm uppercase tracking-wider">
+                                {language === "ar" ? "ابدأ الآن" : "Get Started"}
+                                <PlusCircle className="ms-2 h-5 w-5 group-hover:translate-x-1 transition-transform rtl:group-hover:-translate-x-1" />
                             </div>
+                            {/* Decorative background circle */}
+                            <div className={`absolute -right-6 -bottom-6 w-32 h-32 ${action.color} opacity-[0.04] rounded-full group-hover:scale-150 transition-transform duration-700`}></div>
                         </div>
-                        <h3 className="text-gray-500 font-medium text-[10px] md:text-sm uppercase tracking-wider">{stat.label}</h3>
-                        <p className="text-lg md:text-2xl font-black text-gray-900 mt-0.5">{stat.value}</p>
-                    </div>
+                    </Link>
                 ))}
             </div>
 
-            {/* Quick Actions / Recent Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-                {/* Recent Events */}
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-                    <div className="p-5 md:p-6 border-b border-gray-50 flex items-center justify-between">
-                        <h2 className="text-lg md:text-xl font-bold flex items-center gap-2">
-                            <Calendar className="h-5 w-5 text-blue-600" />
-                            {language === "ar" ? "الفعاليات المضافة" : "Recent Events"}
+            {/* Stats Section */}
+            <div className="pt-8 border-t border-gray-100">
+                <h2 className="text-2xl font-black text-gray-900 mb-8 flex items-center gap-3">
+                    <TrendingUp className="h-7 w-7 text-green-600" />
+                    {language === "ar" ? "إحصائيات عامة" : "General Statistics"}
+                </h2>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                    {stats.map((stat, index) => (
+                        <div key={index} className="bg-white p-8 rounded-[2.5rem] border-2 border-gray-50 shadow-sm hover:shadow-md transition-all">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className={`p-4 rounded-2xl bg-${stat.color}-50 text-${stat.color}-600`}>
+                                    <stat.icon className="h-7 w-7" />
+                                </div>
+                                <span className={`flex items-center text-sm font-black ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+                                    {stat.change}
+                                    {stat.trend === 'up' ? <ArrowUpRight className="ms-1 h-5 w-5" /> : <ArrowDownRight className="ms-1 h-5 w-5" />}
+                                </span>
+                            </div>
+                            <p className="text-sm font-black text-gray-400 uppercase tracking-widest mb-2">{stat.label}</p>
+                            <h4 className="text-3xl font-black text-gray-900">{stat.value}</h4>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Recent Items Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Recent Events List */}
+                <div className="bg-white rounded-[2.5rem] border-2 border-gray-50 shadow-sm overflow-hidden">
+                    <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
+                        <h2 className="text-xl font-black flex items-center gap-3">
+                            <Calendar className="h-6 w-6 text-blue-600" />
+                            {language === "ar" ? "أحدث الفعاليات" : "Latest Events"}
                         </h2>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400">
-                            <MoreHorizontal className="h-4 w-4" />
-                        </Button>
+                        <Link href="/admin/events">
+                            <Button variant="ghost" className="font-black text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                                {language === 'ar' ? 'عرض الكل' : 'View All'}
+                            </Button>
+                        </Link>
                     </div>
-                    <div className="divide-y divide-gray-50 flex-1">
-                        {EVENTS.slice(0, 4).map((event) => (
-                            <div key={event.id} className="p-4 flex items-center gap-4 hover:bg-gray-50 transition-colors">
-                                <img src={event.image} alt="" className="h-10 w-10 md:h-12 md:w-12 rounded-xl object-cover shrink-0" />
+                    <div className="divide-y divide-gray-50">
+                        {events.slice(0, 5).map((event) => (
+                            <div key={event._id} className="p-6 flex items-center gap-5 hover:bg-gray-50 transition-colors group">
+                                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl">
+                                    <img src={event.image} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-gray-900 truncate text-sm md:text-base">{event.title}</p>
-                                    <p className="text-[10px] md:text-xs text-gray-400 truncate uppercase mt-0.5">{event.venue}</p>
+                                    <p className="font-black text-gray-900 truncate text-base">
+                                        {event.title[language] || event.title.en || event.title.ar}
+                                    </p>
+                                    <p className="text-xs text-gray-400 font-bold truncate uppercase mt-1 flex items-center gap-1">
+                                        <MapPin className="h-3 w-3" />
+                                        {event.venueId?.name[language] || event.venueId?.name.en || event.venueId?.name.ar || ""}
+                                    </p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="font-bold text-blue-600 text-sm">{event.price} <span className="text-[10px] uppercase">{event.currency}</span></p>
+                                    <p className="font-black text-blue-600 text-base">
+                                        {event.pricing && event.pricing.length > 0 ? Math.min(...event.pricing.map((p: any) => p.price)) : 0} 
+                                        <span className="text-[10px] ms-1">{event.currency}</span>
+                                    </p>
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <div className="p-4 bg-gray-50/50">
-                        <Button variant="ghost" className="w-full text-xs font-bold text-gray-500 hover:text-blue-600">
-                            {language === 'ar' ? 'عرض الكل' : 'View All'}
-                        </Button>
-                    </div>
                 </div>
 
-                {/* Growth Stats */}
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-10 flex flex-col items-center justify-center text-center">
-                    <div className="h-16 w-16 md:h-20 md:w-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-6">
-                        <TrendingUp className="h-8 w-8 md:h-10 md:w-10" />
+                {/* Growth/Info Card */}
+                <div className="bg-blue-600 rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-center text-white relative overflow-hidden shadow-2xl shadow-blue-200">
+                    <div className="h-24 w-24 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center mb-8 shadow-xl">
+                        <TrendingUp className="h-12 w-12 text-white" />
                     </div>
-                    <h2 className="text-xl md:text-2xl font-black text-gray-900 leading-tight">
-                        {language === "ar" ? "نمو ملحوظ في المبيعات" : "Significant Sales Growth"}
+                    <h2 className="text-3xl font-black leading-tight mb-4">
+                        {language === "ar" ? "نمو ملحوظ في الأداء" : "Exceptional Performance"}
                     </h2>
-                    <p className="text-sm md:text-base text-gray-500 mt-2 max-w-[280px] md:max-w-sm">
+                    <p className="text-blue-100 font-medium text-lg max-w-sm">
                         {language === "ar" ? "زادت مبيعاتك بنسبة 25٪ هذا الشهر. أداء ممتاز!" : "Sales increased by 25% this month. Great performance!"}
                     </p>
-                    <button className="mt-8 w-full md:w-auto px-10 py-3.5 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 text-sm">
+                    <Link href="/admin/stats" className="mt-10 w-full sm:w-auto px-12 py-4 bg-white text-blue-600 font-black rounded-2xl hover:bg-blue-50 transition-all shadow-xl text-base">
                         {language === "ar" ? "التقارير المفصلة" : "Detailed Reports"}
-                    </button>
+                    </Link>
+                    {/* Decorative Elements */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-[0.05] rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-white opacity-[0.05] rounded-full translate-y-1/2 -translate-x-1/2"></div>
                 </div>
             </div>
         </div>

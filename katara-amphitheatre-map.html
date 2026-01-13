@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>خريطة مسرح كتارا - عبير نعمة</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .seat {
+            transition: filter 0.2s ease, transform 0.2s ease;
+            cursor: pointer;
+            transform-origin: center;
+            transform-box: fill-box;
+        }
+        .seat:hover {
+            filter: brightness(1.2);
+            transform: scale(1.3);
+        }
+        .seat.selected {
+            stroke: #000;
+            stroke-width: 2px;
+            fill: #fff !important;
+        }
+        .section-path {
+            transition: opacity 0.3s ease, fill 0.3s ease;
+            cursor: pointer;
+        }
+        .section-path:hover {
+            opacity: 0.9;
+        }
+        .section-label {
+            pointer-events: none;
+            font-weight: bold;
+            text-transform: uppercase;
+            fill: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        #map-viewport {
+            background-color: #f8fafc;
+        }
+    </style>
+</head>
+<body class="bg-white text-slate-900 min-h-screen flex flex-col font-sans">
+    <!-- Header -->
+    <header class="px-8 py-4 bg-white border-b border-slate-100 flex justify-between items-center shadow-sm">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">P</div>
+            <div>
+                <h1 class="text-xl font-bold text-slate-800">حفل عبير نعمة بمشاركة أوركسترا قطر الفيلهارمونية</h1>
+                <p class="text-sm text-slate-500">U VENUE • الجمعة 23 يناير، 19:30</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="text-sm font-medium text-slate-600 flex items-center gap-2">
+                <span>EGP / AR</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+            <button id="reset-btn" class="text-sm font-semibold text-indigo-600 hover:text-indigo-700">إعادة ضبط</button>
+        </div>
+    </header>
+
+    <!-- Main Map Area -->
+    <main class="flex-1 relative overflow-hidden" id="map-viewport">
+        <div id="map-container" class="w-full h-full flex items-center justify-center p-8">
+            <svg id="stage-svg" viewBox="0 0 1229 881" class="w-full h-full">
+                <!-- Zoomable Group -->
+                <g id="zoom-group">
+                    <!-- Precise Map Container from Snippet -->
+                    <g id="hall-map-container" transform="translate(271.88, 13.12) scale(0.513)">
+                        <!-- Stage from Snippet -->
+                        <g class="stage">
+                            <path fill="#D1D2D3" d="M1663.8,251.3c-1.1,0.5-2.7,1.4-4.6,2.3c-259.1,129.1-502.7,131.5-638.4,131.4 c-135.4-0.1-377.5-2.9-635.4-131.4c-1.9-1-3.6-1.8-4.6-2.3V60.4c0-1.3,2.7-2.4,6-2.4h1271c3.3,0,6,1.1,6,2.4V251.3z" />
+                            <text x="1000" y="200" text-anchor="middle" fill="#929497" font-size="90" font-weight="bold" style="letter-spacing: 0.2em;">STAGE</text>
+                        </g>
+
+                        <!-- Section Overlays (Visible when zoomed out) -->
+                        <g id="sections-layer"></g>
+                        <!-- Seats (Visible when zoomed in) -->
+                        <g id="map-content" opacity="0"></g>
+                    </g>
+                </g>
+            </svg>
+        </div>
+
+        <!-- Floating Controls -->
+        <div class="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col gap-2">
+            <button id="zoom-in" class="w-12 h-12 bg-white rounded-full shadow-lg border border-slate-100 flex items-center justify-center text-2xl font-light hover:bg-slate-50">+</button>
+            <button id="zoom-out" class="w-12 h-12 bg-white rounded-full shadow-lg border border-slate-100 flex items-center justify-center text-2xl font-light hover:bg-slate-50">-</button>
+        </div>
+
+        <!-- Legend (Matching Image 5) -->
+        <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3 overflow-x-auto max-w-full px-4 no-scrollbar">
+            <div id="legend" class="flex gap-3">
+                <!-- Legend items will be injected -->
+            </div>
+        </div>
+
+        <!-- Selection Bar -->
+
+
+
+    </main>
+
+    <script>
+        const categories = {
+            vip: { color: "#ef4444", price: 10673.52, label: "VIP" },
+            royal: { color: "#a855f7", price: 10006.42, label: "ROYAL" },
+            diamond: { color: "#818cf8", price: 8672.23, label: "DIAMOND" },
+            platinum: { color: "#3b82f6", price: 8205.27, label: "PLATINUM" },
+            gold: { color: "#22d3ee", price: 7004.50, label: "GOLD" },
+            silver: { color: "#94a3b8", price: 5000.00, label: "SILVER" },
+            bronze: { color: "#e2e8f0", price: 3000.00, label: "BRONZE" }
+        };
+
+        const mapContent = document.getElementById('map-content');
+        const sectionsLayer = document.getElementById('sections-layer');
+        const legend = document.getElementById('legend');
+        const selectionBar = document.getElementById('selection-bar');
+        const selectionPrice = document.getElementById('selection-price');
+        let selectedSeats = new Set();
+
+        // Initialize Legend
+        Object.entries(categories).forEach(([id, config]) => {
+            if (id === 'bronze' || id === 'silver') return; // Match images which show top 5
+            const item = document.createElement('div');
+            item.className = 'bg-white px-4 py-2 rounded-full shadow-md border border-slate-50 flex items-center gap-3 whitespace-nowrap';
+            item.innerHTML = `
+                <span class="text-sm font-bold text-slate-700">EGP ${config.price.toLocaleString()}</span>
+                <span class="w-3 h-3 rounded-full" style="background-color: ${config.color}"></span>
+            `;
+            legend.appendChild(item);
+        });
+
+        // Helper to draw section paths
+        function createSection(section, color) {
+            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            group.setAttribute("class", "section-group");
+            
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute("d", section.path);
+            path.setAttribute("fill", color);
+            path.setAttribute("stroke", "#D1D2D3");
+            path.setAttribute("stroke-width", "2");
+            path.setAttribute("class", "section-path transition-all hover:opacity-80 cursor-pointer");
+            
+            path.addEventListener('click', () => {
+                // Auto zoom to section
+                const bounds = path.getBBox();
+                scale = 3;
+                translateX = -bounds.x * scale + 614 - (bounds.width * scale / 2);
+                translateY = -bounds.y * scale + 440 - (bounds.height * scale / 2);
+                updateTransform();
+            });
+
+            const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            text.setAttribute("transform", section.labelPos.transform);
+            text.setAttribute("fill", "#808285");
+            text.setAttribute("font-size", section.labelPos.fontSize);
+            text.setAttribute("font-weight", "bold");
+            text.setAttribute("text-anchor", "middle");
+            text.textContent = section.name;
+
+            group.appendChild(path);
+            group.appendChild(text);
+            return group;
+        }
+
+        const sections = [
+            { id: 'vip', name: 'VIP', category: 'vip', path: 'M1765.6,552.7 c-172.5,53.7-427.7,112.1-739.9,110.6c-308.5-1.6-560.3-61.1-731.4-115.7c0-40.3,0-80.5,0-120.8c174.2,53.6,429,111.1,739.9,110.6 c306.8-0.5,558.4-57.4,731.4-110.6C1765.6,468.7,1765.6,510.7,1765.6,552.7z', labelPos: { transform: 'translate(953, 636)', fontSize: '93px' } },
+            { id: 'royal', name: 'ROYAL', category: 'royal', path: 'M1765.6,607.1 c-66.9,20.7-139.6,40.4-217.7,57.8c-89.4,19.9-173.8,34.2-251.7,44.2c1.7,39.1,3.4,78.2,5.1,117.4c-78,10.6-169,18-270.5,17 c-100.9-1-191.3-10.1-268.8-22.1c1.1-36.3,2.3-72.6,3.4-108.9c-78.7-9-166.3-23.4-260.2-45.9c-76.4-18.3-146.2-39.3-209.2-61.2 c-0.6-19.3-1.1-38.6-1.7-57.8c172.1,55.1,427.1,115.6,739.9,116.3c308.2,0.6,560.2-57.2,731.4-110.6 C1765.6,571.2,1765.6,589.1,1765.6,607.1z', labelPos: { transform: 'translate(878, 791)', fontSize: '93px' } },
+            { id: 'diamond', name: 'DIAMOND', category: 'diamond', path: 'M1294.4,1115.7c-73.4,13.4-163,24-265.3,23.8 c-104.6-0.1-196-11.5-270.5-25.5c-3.4-52.7-4.8-109.5-3.4-170.1c1-42.9,3.4-83.8,6.8-122.5c77.5,12.1,167.9,21.1,268.8,22.1 c101.4,1,192.4-6.4,270.5-17c2.3,39.1,4.5,78.2,6.8,117.4C1303.5,1001.1,1299,1058.4,1294.4,1115.7z', labelPos: { transform: 'translate(1008, 1014)', fontSize: '93px' } },
+            { id: 'platinum', name: 'PLATINUM', category: 'platinum', path: 'M755.2,943.9C681,933.8,601.6,920.3,518,902.2 c-79.9-17.2-154.6-36.6-223.7-57c0.6-80,1.1-159.9,1.7-239.9c67.7,23.5,143.9,46.3,228.1,65.7c87.1,20,168.2,33.1,241.4,41.5 c-0.7,35.6-1.3,71.9-3.4,108.9C759.8,862.2,757.5,903.1,755.2,943.9z M1765.6,845.5c0-79.5,0-159,0-238.4 c-74,22.9-155.3,44.7-243.5,63.5c-79.8,17-155.5,29.5-226,38.6c1.7,39.1,3.4,78.2,5.1,117.4c2.3,39.1,4.5,78.2,6.8,117.4 c76.9-9.3,160.6-22.9,249.7-42.8C1632.6,884.4,1702,865.4,1765.6,845.5z', labelPos: { transform: 'translate(329, 773) rotate(12)', fontSize: '76px' } },
+            { id: 'gold', name: 'GOLD', category: 'gold', path: 'M765.4,1416.3c-6.5-80.6-13-161.3-19.5-241.9 c-74.6-10.2-154.3-23.8-238.1-42c-76-16.4-147.2-34.8-213.5-54c0-77.5,0-155,0-232.5c68,19.7,141,38.4,218.8,55.2 c85.1,18.4,166,32.2,241.9,42.7c1.3,56.3,2.5,112.6,3.8,168.9c65.1,12.8,141.3,23.1,226.8,26.1c120.3,4.1,225.1-7.6,308.8-23.1 c4.5-57.4,9.1-114.9,13.6-172.3c67-8.1,138.8-19.5,214.7-35.1c88.3-18.2,169.5-39.7,243-62.4c0,77.1,0,154.2,0,231.3 c-57.4,17-118.5,33.1-183.3,47.6c-94.5,21.2-183.8,36.2-266.6,46.7c-6.7,80.2-13.5,160.4-20.2,240.6 c-82.8,7.8-173.1,13-269.9,13.6C932.6,1426.3,845.6,1422.6,765.4,1416.3z', labelPos: { transform: 'translate(890, 1309)', fontSize: '93px' } },
+            { id: 'bronze', name: 'BRONZE', category: 'bronze', path: 'M1765.6,1540.4 c-194.1,49.3-461.1,95.9-779.4,88.9c-278.3-6.1-513.6-51.2-691.9-99.1c0.5-50.7,0.9-101.5,1.4-152.2 c64.3,21.8,137.3,42.9,218.2,60.4c78,16.8,150.6,27.5,216.1,34.2c11.7-18.5,23.4-37,35-55.5c81,6.1,169.2,9.6,263.6,8.5 c95.5-1,184.5-6.5,266.2-14.5c6.8,21.8,13.6,43.7,20.4,65.5c77-10.4,161.9-26,252.6-49c71.6-18.2,137.7-38.6,197.7-59.9 C1765.6,1425.3,1765.6,1482.9,1765.6,1540.4z', labelPos: { transform: 'translate(835, 1558)', fontSize: '93px' } }
+        ];
+
+        sections.forEach(s => sectionsLayer.appendChild(createSection(s, categories[s.category].color)));
+
+        // Generate Seats (Matching the layout)
+        function generateArcRow(centerX, centerY, radius, startAngle, endAngle, count, rowLabel, category) {
+            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            const angleStep = (endAngle - startAngle) / (count - 1);
+            for (let i = 0; i < count; i++) {
+                const angle = (startAngle + i * angleStep) * (Math.PI / 180);
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                const seat = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                const isSold = Math.random() < 0.15;
+                seat.setAttribute("x", x - 6);
+                seat.setAttribute("y", y - 6);
+                seat.setAttribute("width", "12");
+                seat.setAttribute("height", "12");
+                seat.setAttribute("rx", "2");
+                seat.setAttribute("fill", isSold ? "#e2e8f0" : categories[category].color);
+                seat.setAttribute("class", `seat ${isSold ? 'sold' : ''}`);
+                if (!isSold) seat.addEventListener('click', () => toggleSeat(seat, category));
+                group.appendChild(seat);
+            }
+            return group;
+        }
+
+        function generateGridSeats(startX, startY, rows, cols, rowGap, colGap, category) {
+            const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const x = startX + c * colGap;
+                    const y = startY + r * rowGap;
+                    const seat = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                    const isSold = Math.random() < 0.2;
+                    seat.setAttribute("x", x - 6);
+                    seat.setAttribute("y", y - 6);
+                    seat.setAttribute("width", "12");
+                    seat.setAttribute("height", "12");
+                    seat.setAttribute("rx", "2");
+                    seat.setAttribute("fill", isSold ? "#e2e8f0" : categories[category].color);
+                    seat.setAttribute("class", `seat ${isSold ? 'sold' : ''}`);
+                    if (!isSold) seat.addEventListener('click', () => toggleSeat(seat, category));
+                    group.appendChild(seat);
+                }
+            }
+            return group;
+        }
+
+        // Place seats in sections (Coordinates adjusted for new precise paths)
+        // VIP
+        for(let r=0; r<4; r++) mapContent.appendChild(generateArcRow(1000, 0, 480 + r*25, 45, 135, 30, 'VIP', 'vip'));
+        
+        // Royal
+        for(let r=0; r<5; r++) mapContent.appendChild(generateArcRow(1000, 0, 620 + r*25, 40, 140, 40, 'ROYAL', 'royal'));
+
+        // Diamond
+        mapContent.appendChild(generateGridSeats(850, 850, 8, 20, 22, 18, 'diamond'));
+        
+        // Platinum sides
+        mapContent.appendChild(generateGridSeats(400, 650, 6, 15, 22, 20, 'platinum'));
+        mapContent.appendChild(generateGridSeats(1300, 650, 6, 15, 22, 20, 'platinum'));
+
+        // Gold sides
+        mapContent.appendChild(generateGridSeats(350, 950, 8, 15, 22, 22, 'gold'));
+        mapContent.appendChild(generateGridSeats(1350, 950, 8, 15, 22, 22, 'gold'));
+        mapContent.appendChild(generateGridSeats(850, 1150, 8, 20, 22, 18, 'gold'));
+
+        // Bronze
+        mapContent.appendChild(generateGridSeats(700, 1450, 5, 35, 22, 18, 'bronze'));
+
+        // Pan and Zoom logic
+        const viewport = document.getElementById('map-viewport');
+        const zoomGroup = document.getElementById('zoom-group');
+        const svg = document.getElementById('stage-svg');
+        let scale = 1, translateX = 0, translateY = 0;
+        let isDragging = false, lastMouseX, lastMouseY;
+
+        function updateTransform() {
+            zoomGroup.setAttribute('transform', `translate(${translateX}, ${translateY}) scale(${scale})`);
+            
+            // Show/Hide layers based on zoom level
+            if (scale > 2.2) {
+                mapContent.setAttribute('opacity', '1');
+                sectionsLayer.setAttribute('opacity', '0.1');
+            } else {
+                mapContent.setAttribute('opacity', '0');
+                sectionsLayer.setAttribute('opacity', '1');
+            }
+        }
+
+        // Mouse Wheel Zoom
+        viewport.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            const newScale = Math.min(Math.max(0.5, scale * delta), 5);
+            
+            // Zoom towards mouse position
+            const rect = svg.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // Calculate point in SVG coordinate system
+            const svgX = (mouseX - translateX) / scale;
+            const svgY = (mouseY - translateY) / scale;
+            
+            translateX = mouseX - svgX * newScale;
+            translateY = mouseY - svgY * newScale;
+            scale = newScale;
+            
+            updateTransform();
+        }, { passive: false });
+
+        // Dragging
+        viewport.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.seat')) return;
+            isDragging = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+            viewport.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - lastMouseX;
+            const dy = e.clientY - lastMouseY;
+            
+            translateX += dx;
+            translateY += dy;
+            
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+            
+            updateTransform();
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+            viewport.style.cursor = 'default';
+        });
+
+        // Zoom Buttons
+        document.getElementById('zoom-in').addEventListener('click', () => {
+            const newScale = Math.min(scale * 1.5, 5);
+            const centerX = 614; // Center of SVG (1229/2)
+            const centerY = 440; // Center of SVG (881/2)
+            
+            translateX = (translateX - centerX) * (newScale / scale) + centerX;
+            translateY = (translateY - centerY) * (newScale / scale) + centerY;
+            scale = newScale;
+            updateTransform();
+        });
+
+        document.getElementById('zoom-out').addEventListener('click', () => {
+            const newScale = Math.max(scale / 1.5, 0.5);
+            const centerX = 614;
+            const centerY = 440;
+            
+            translateX = (translateX - centerX) * (newScale / scale) + centerX;
+            translateY = (translateY - centerY) * (newScale / scale) + centerY;
+            scale = newScale;
+            updateTransform();
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            scale = 1; translateX = 0; translateY = 0;
+            updateTransform();
+        });
+
+        function toggleSeat(seat, category) {
+            if (seat.classList.contains('selected')) {
+                seat.classList.remove('selected');
+                selectionBar.classList.add('hidden');
+            } else {
+                // Clear others
+                document.querySelectorAll('.seat.selected').forEach(s => s.classList.remove('selected'));
+                seat.classList.add('selected');
+                selectionBar.classList.remove('hidden');
+                selectionPrice.innerText = `EGP ${categories[category].price.toLocaleString()}`;
+            }
+        }
+
+    </script>
+</body>
+</html>

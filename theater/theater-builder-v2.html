@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theater Section Builder - منشئ أقسام المسرح</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: none;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(124, 58, 237, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 11px;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            min-height: calc(100vh - 52px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: rgba(255, 255, 255, 0.03);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 16px;
+            overflow-y: auto;
+            max-height: calc(100vh - 52px);
+        }
+
+        .sidebar-section {
+            margin-bottom: 20px;
+        }
+
+        .sidebar-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-family: inherit;
+            font-size: 12px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #7c3aed;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .form-row-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+        }
+
+        /* Color Picker */
+        .color-picker-wrapper {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .color-picker {
+            width: 40px;
+            height: 32px;
+            border-radius: 6px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .color-picker::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        .color-picker::-webkit-color-swatch {
+            border: none;
+            border-radius: 4px;
+        }
+
+        .color-presets {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+
+        .color-preset {
+            width: 24px;
+            height: 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .color-preset:hover {
+            transform: scale(1.1);
+        }
+
+        /* Category Presets */
+        .category-presets {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .cat-btn {
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 9px;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            color: white;
+            transition: all 0.2s;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .cat-btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        /* Drag & Drop Styles */
+        .section-item.dragging {
+            opacity: 0.5;
+            border: 2px dashed #7c3aed;
+        }
+
+        /* Live Preview Box */
+        .preview-box {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 12px 0;
+            text-align: center;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-section {
+            border: 3px solid #e57373;
+            border-radius: 10px 10px 30% 30%;
+            padding: 10px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            transition: all 0.3s;
+        }
+
+        .preview-row {
+            display: flex;
+            gap: 3px;
+            justify-content: center;
+        }
+
+        .preview-seat {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            background: #e57373;
+            transition: all 0.3s;
+        }
+
+        /* Section List */
+        .section-list {
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .section-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .section-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .section-item.selected {
+            border-color: #7c3aed;
+            background: rgba(124, 58, 237, 0.15);
+        }
+
+        .section-color-bar {
+            width: 4px;
+            height: 30px;
+            border-radius: 2px;
+        }
+
+        .section-info {
+            flex: 1;
+        }
+
+        .section-name {
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .section-details {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .icon-btn {
+            width: 22px;
+            height: 22px;
+            border-radius: 5px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        .icon-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .icon-btn.delete:hover {
+            background: #ef4444;
+        }
+
+        /* Canvas Area */
+        .canvas-area {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow: auto;
+        }
+
+        .theater-name {
+            background: transparent;
+            border: none;
+            font-size: 22px;
+            font-weight: 700;
+            color: white;
+            text-align: center;
+            padding: 6px 14px;
+            border-bottom: 2px dashed rgba(255, 255, 255, 0.2);
+            margin-bottom: 16px;
+        }
+
+        .theater-name:focus {
+            outline: none;
+            border-bottom-color: #7c3aed;
+        }
+
+        /* Stage */
+        .stage {
+            background: linear-gradient(180deg, #4a5568 0%, #2d3748 100%);
+            border-radius: 0 0 50% 50%;
+            height: 60px;
+            width: 45%;
+            max-width: 350px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 25px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .stage-text {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 5px;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 16px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        .tool-btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-family: inherit;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .tool-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .tool-btn.active {
+            background: linear-gradient(135deg, #7c3aed 0%, #9333ea 100%);
+        }
+
+        /* Theater Layout Container */
+        .theater-layout {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 800px;
+            /* Big canvas */
+            overflow: auto;
+            /* Allow scrolling */
+            /* Grid background for alignment help */
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            border-radius: 12px;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Section Row - remove flex layout since we are going absolute */
+        .section-row {
+            display: contents;
+            /* Or just remove it */
+        }
+
+        /* Section Block */
+        .theater-section {
+            position: absolute;
+            /* Absolute positioning for drag */
+            padding: 12px 15px;
+            transition: transform 0.1s, box-shadow 0.3s;
+            /* Faster transform for drag */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            cursor: move;
+            /* Move cursor */
+            user-select: none;
+            /* Prevent selection while dragging */
+            z-index: 10;
+            min-width: 80px;
+            min-height: 60px;
+        }
+
+        .theater-section:active {
+            cursor: grabbing;
+            z-index: 100;
+            /* Bring to front while dragging */
+        }
+
+        .theater-section:hover {
+            filter: brightness(1.1);
+        }
+
+        .theater-section.selected {
+            filter: brightness(1.2);
+        }
+
+        .section-label {
+            position: absolute;
+            top: -8px;
+            right: 15px;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        /* Seat Row */
+        .seat-row {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .row-label {
+            width: 20px;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .seats-wrapper {
+            display: flex;
+            gap: 2px;
+            justify-content: center;
+        }
+
+        .seat {
+            width: 18px;
+            height: 18px;
+            border-radius: 3px 3px 5px 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 7px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .seat:hover {
+            transform: scale(1.2);
+            z-index: 10;
+        }
+
+        .seat.skipped {
+            background: #374151 !important;
+            opacity: 0.4;
+        }
+
+        .seat.pinned {
+            border: 2px solid #fbbf24 !important;
+        }
+
+        .aisle {
+            width: 12px;
+        }
+
+        /* Stats */
+        .stats-bar {
+            display: flex;
+            gap: 14px;
+            padding: 10px 18px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .empty-state-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+
+        /* Slider */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.2);
+            margin-top: 5px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #7c3aed;
+            cursor: pointer;
+        }
+
+        /* Edit Section Panel */
+        .edit-panel {
+            background: rgba(124, 58, 237, 0.1);
+            border: 1px solid rgba(124, 58, 237, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+
+        .edit-panel-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #a78bfa;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        @media (max-width: 900px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">🎭</div>
+            <span>منشئ أقسام المسرح</span>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="clearAll()">🗑️ مسح</button>
+            <button class="btn btn-secondary" onclick="exportData()">📥 تصدير</button>
+            <button class="btn btn-primary" onclick="previewTheater()">👁️ معاينة</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <aside class="sidebar">
+            <!-- Add/Edit Section -->
+            <div class="sidebar-section">
+                <h3 class="sidebar-title" id="sectionFormTitle">➕ إضافة قسم جديد</h3>
+
+                <div class="form-group">
+                    <label class="form-label">اسم القسم</label>
+                    <input type="text" class="form-input" id="sectionName" placeholder="VIP, Platinum...">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">فئة السعر (إعداد مسبق)</label>
+                    <div class="category-presets" id="categoryPresets">
+                        <!-- Will be populated by JS -->
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">لون القسم</label>
+                        <div class="color-picker-wrapper">
+                            <input type="color" class="color-picker" id="sectionColor" value="#e57373"
+                                oninput="updatePreview()">
+                            <input type="text" class="form-input" id="sectionColorText" value="#e57373" style="flex:1">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">السعر</label>
+                        <input type="number" class="form-input" id="sectionPrice" placeholder="0.00">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">صف الموقع (للوضع المتجاور)</label>
+                    <input type="number" class="form-input" id="sectionRowIndex" value="0" min="0"
+                        placeholder="0 = صف جديد">
+                    <small style="color:rgba(255,255,255,0.4);font-size:10px">نفس الرقم = نفس الصف (متجاور)</small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">انحناء: <span id="curveVal">0</span>%</label>
+                        <input type="range" id="sectionCurve" min="-1000" max="1000" value="0"
+                            oninput="updateCurvePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">ميلان: <span id="skewVal">0</span>°</label>
+                        <input type="range" id="sectionSkew" min="-1000" max="1000" value="0"
+                            oninput="updateSkewPreview()">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">حجم المقعد: <span id="seatSizeVal">18</span>px</label>
+                        <input type="range" id="sectionSeatSize" min="12" max="40" value="18"
+                            oninput="updateSeatSizePreview()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">المسافة أفقية: <span id="seatGapVal">2</span>px</label>
+                        <input type="range" id="sectionSeatGap" min="0" max="10" value="2"
+                            oninput="updateSeatGapPreview()">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">المسافة عمودية (صفوف): <span id="rowGapVal">4</span>px</label>
+                    <input type="range" id="sectionRowGap" min="0" max="50" value="4" oninput="updateRowGapPreview()">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">تدوير القسم: <span id="rotateVal">0</span>°</label>
+                    <input type="range" id="sectionRotation" min="-45" max="45" value="0" step="1"
+                        oninput="updateRotationPreview()">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                        <input type="checkbox" id="sectionBorder" checked>
+                        إظهار الحدود (Border)
+                    </label>
+                </div>
+
+                <!-- Live Preview -->
+                <div class="preview-box">
+                    <div class="preview-section" id="livePreview">
+                        <div class="preview-row" id="previewRow1">
+                            <div class="preview-seat"></div>
+                            <div class="preview-seat"></div>
+                            <div class="preview-seat"></div>
+                        </div>
+                        <div class="preview-row" id="previewRow2">
+                            <div class="preview-seat"></div>
+                            <div class="preview-seat"></div>
+                            <div class="preview-seat"></div>
+                            <div class="preview-seat"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <button class="btn btn-primary" style="flex:1" onclick="saveSection()" id="saveSectionBtn">➕
+                        إضافة</button>
+                    <button class="btn btn-secondary" style="flex:1;display:none" onclick="cancelEdit()"
+                        id="cancelEditBtn">❌ إلغاء</button>
+                </div>
+            </div>
+
+            <!-- Sections List -->
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">الأقسام (<span id="sectionCount">0</span>)</h3>
+                <div class="section-list" id="sectionList">
+                    <div class="empty-state" style="padding:15px">
+                        <p style="font-size:11px">لا توجد أقسام</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Rows to Selected Section -->
+            <div class="sidebar-section" id="rowsSection" style="display:none">
+                <h3 class="sidebar-title">إضافة صفوف للقسم: <span id="selectedSectionName"></span></h3>
+                <div class="form-row-3">
+                    <div class="form-group">
+                        <label class="form-label">الصف</label>
+                        <input type="text" class="form-input" id="rowName" placeholder="A">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">المقاعد</label>
+                        <input type="number" class="form-input" id="rowSeats" value="10" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">الممرات</label>
+                        <input type="number" class="form-input" id="rowAisles" value="0" min="0" max="5">
+                    </div>
+                </div>
+                <button class="btn btn-primary btn-sm" style="width:100%" onclick="addRow()">➕ إضافة صف</button>
+
+                <div id="rowsList" style="margin-top:10px"></div>
+            </div>
+        </aside>
+
+        <div class="canvas-area">
+            <input type="text" class="theater-name" placeholder="اسم المسرح" id="theaterName">
+            <input type="file" id="bgImageInput" accept="image/*" style="display:none" onchange="handleBgUpload(event)">
+
+            <div class="toolbar">
+                <button class="tool-btn active" id="selectTool" onclick="setTool('select')">👆 تحديد</button>
+                <button class="tool-btn" id="skipTool" onclick="setTool('skip')">⛔ تخطي</button>
+                <button class="tool-btn" id="pinTool" onclick="setTool('pin')">📌 تثبيت</button>
+                <div style="width:1px;background:rgba(255,255,255,0.2);margin:0 5px"></div>
+                <button class="tool-btn" onclick="triggerBgUpload()" title="تغيير الخلفية">🖼️ خلفية</button>
+                <button class="tool-btn" onclick="clearBackground()" title="مسح الخلفية">❌</button>
+                <div style="width:1px;background:rgba(255,255,255,0.2);margin:0 5px"></div>
+                <button class="tool-btn" onclick="changeZoom(-0.1)">➖</button>
+                <button class="tool-btn" onclick="changeZoom(0.1)">➕</button>
+                <button class="tool-btn" onclick="resetZoom()" title="Reset Zoom">🔍</button>
+            </div>
+
+            <div class="stage">
+                <span class="stage-text">المسرح</span>
+            </div>
+
+            <div class="theater-layout" id="theaterLayout">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🎭</div>
+                    <p>ابدأ بإضافة أقسام</p>
+                </div>
+            </div>
+
+            <div class="stats-bar" id="statsBar" style="display:none">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalSeats">0</div>
+                    <div class="stat-label">المقاعد</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="totalSections">0</div>
+                    <div class="stat-label">الأقسام</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="totalRows">0</div>
+                    <div class="stat-label">الصفوف</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let sections = [];
+        let backgroundImage = null;
+        let selectedSectionId = null;
+        let editingSection = null;
+        let currentTool = 'select';
+        let draggedItem = null;
+        let zoomLevel = 1;
+
+        const categories = {
+            vip: { color: "#ef4444", price: 10673.52, label: "VIP" },
+            royal: { color: "#a855f7", price: 10006.42, label: "ROYAL" },
+            diamond: { color: "#818cf8", price: 8672.23, label: "DIAMOND" },
+            platinum: { color: "#3b82f6", price: 8205.27, label: "PLATINUM" },
+            gold: { color: "#22d3ee", price: 7004.50, label: "GOLD" },
+            silver: { color: "#94a3b8", price: 5000.00, label: "SILVER" },
+            bronze: { color: "#e2e8f0", price: 3000.00, label: "BRONZE" }
+        };
+
+        function renderCategoryPresets() {
+            const container = document.getElementById('categoryPresets');
+            container.innerHTML = Object.entries(categories).map(([key, cat]) => `
+                <div class="cat-btn" style="background:${cat.color}" onclick="setCategory('${key}')">
+                    ${cat.label}
+                </div>
+            `).join('');
+        }
+
+        function setCategory(key) {
+            const cat = categories[key];
+            if (!cat) return;
+
+            document.getElementById('sectionName').value = cat.label;
+            document.getElementById('sectionColor').value = cat.color;
+            document.getElementById('sectionColorText').value = cat.color;
+            document.getElementById('sectionPrice').value = cat.price;
+            updatePreview();
+        }
+
+        // Sync colors
+        document.getElementById('sectionColor').addEventListener('input', function () {
+            document.getElementById('sectionColorText').value = this.value;
+            updatePreview();
+        });
+
+        function setColor(c) {
+            document.getElementById('sectionColor').value = c;
+            document.getElementById('sectionColorText').value = c;
+            updatePreview();
+        }
+
+        // Background Image Handling
+        function triggerBgUpload() {
+            document.getElementById('bgImageInput').click();
+        }
+
+        function handleBgUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    backgroundImage = e.target.result;
+                    renderCanvas();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function clearBackground() {
+            backgroundImage = null;
+            document.getElementById('bgImageInput').value = '';
+            renderCanvas();
+        }
+
+        // Live preview updates
+        function updatePreview() {
+            const color = document.getElementById('sectionColor').value;
+            const preview = document.getElementById('livePreview');
+            preview.style.borderColor = color;
+            preview.querySelectorAll('.preview-seat').forEach(s => s.style.background = color);
+        }
+
+        function updateCurvePreview() {
+            const curve = document.getElementById('sectionCurve').value;
+            document.getElementById('curveVal').textContent = curve;
+
+            const preview = document.getElementById('livePreview');
+            const intensity = curve / 100;
+
+            // Apply curve to preview seats
+            preview.querySelectorAll('.preview-row').forEach(row => {
+                const seats = row.querySelectorAll('.preview-seat');
+                seats.forEach((seat, i) => {
+                    const total = seats.length;
+                    const normalized = total > 1 ? (i - (total - 1) / 2) / ((total - 1) / 2) : 0;
+                    const yOffset = Math.pow(normalized, 2) * intensity * 15;
+                    const rotation = normalized * intensity * 10;
+                    seat.style.transform = `translateY(-${yOffset}px) rotate(${rotation}deg)`;
+                });
+            });
+
+            // Update selected section in real-time
+            if (editingSection) {
+                const section = sections.find(s => s.id === editingSection);
+                if (section) {
+                    section.curve = parseInt(curve);
+                    renderCanvas();
+                }
+            }
+        }
+
+        function updateSkewPreview() {
+            const skew = document.getElementById('sectionSkew').value;
+            document.getElementById('skewVal').textContent = skew;
+
+            const preview = document.getElementById('livePreview');
+            const rotation = document.getElementById('sectionRotation').value;
+            preview.style.transform = `skewX(${skew}deg) rotate(${rotation}deg)`;
+
+            // Update selected section in real-time
+            if (editingSection) {
+                const section = sections.find(s => s.id === editingSection);
+                if (section) {
+                    section.skew = parseInt(skew);
+                    renderCanvas();
+                }
+            }
+        }
+
+        function updateRotationPreview() {
+            const rotation = document.getElementById('sectionRotation').value;
+            document.getElementById('rotateVal').textContent = rotation;
+
+            const preview = document.getElementById('livePreview');
+            const skew = document.getElementById('sectionSkew').value;
+            preview.style.transform = `skewX(${skew}deg) rotate(${rotation}deg)`;
+
+            // Update selected section in real-time
+            if (editingSection) {
+                const section = sections.find(s => s.id === editingSection);
+                if (section) {
+                    section.rotation = parseInt(rotation);
+                    renderCanvas();
+                }
+            }
+        }
+
+        function updateSeatSizePreview() {
+            const size = document.getElementById('sectionSeatSize').value;
+            document.getElementById('seatSizeVal').textContent = size;
+
+            const preview = document.getElementById('livePreview');
+            preview.querySelectorAll('.preview-seat').forEach(s => {
+                s.style.width = size + 'px';
+                s.style.height = size + 'px';
+            });
+
+            if (editingSection) {
+                const section = sections.find(s => s.id === editingSection);
+                if (section) {
+                    section.seatSize = parseInt(size);
+                    renderCanvas();
+                }
+            }
+        }
+
+        function updateSeatGapPreview() {
+            const gap = document.getElementById('sectionSeatGap').value;
+            document.getElementById('seatGapVal').textContent = gap;
+
+            const preview = document.getElementById('livePreview');
+            preview.querySelectorAll('.preview-row').forEach(r => {
+                r.style.gap = gap + 'px';
+            });
+
+            if (editingSection) {
+                const section = sections.find(s => s.id === editingSection);
+                if (section) {
+                    section.seatGap = parseInt(gap);
+                    renderCanvas();
+                }
+            }
+        }
+
+        function updateRowGapPreview() {
+            const gap = document.getElementById('sectionRowGap').value;
+            document.getElementById('rowGapVal').textContent = gap;
+
+            const preview = document.getElementById('livePreview');
+            preview.style.gap = gap + 'px';
+
+            if (editingSection) {
+                const section = sections.find(s => s.id === editingSection);
+                if (section) {
+                    section.rowGap = parseInt(gap);
+                    renderCanvas();
+                }
+            }
+        }
+
+        // Save section (add or update)
+        function saveSection() {
+            const name = document.getElementById('sectionName').value.trim() || `Section ${sections.length + 1}`;
+            const color = document.getElementById('sectionColor').value;
+            const price = parseFloat(document.getElementById('sectionPrice').value) || 0;
+            const curve = parseInt(document.getElementById('sectionCurve').value);
+            const skew = parseInt(document.getElementById('sectionSkew').value);
+            const seatSize = parseInt(document.getElementById('sectionSeatSize').value);
+            const seatGap = parseInt(document.getElementById('sectionSeatGap').value);
+            const rowGap = parseInt(document.getElementById('sectionRowGap').value);
+            const rotation = parseInt(document.getElementById('sectionRotation').value);
+            const rowIndex = parseInt(document.getElementById('sectionRowIndex').value) || 0;
+            const hasBorder = document.getElementById('sectionBorder').checked;
+
+            if (editingSection) {
+                // Update existing
+                const section = sections.find(s => s.id === editingSection);
+                if (section) {
+                    section.name = name;
+                    section.color = color;
+                    section.price = price;
+                    section.curve = curve;
+                    section.skew = skew;
+                    section.seatSize = seatSize;
+                    section.seatGap = seatGap;
+                    section.rowGap = rowGap;
+                    section.rotation = rotation;
+                    section.rowIndex = rowIndex;
+                    section.hasBorder = hasBorder;
+                }
+            } else {
+                // Add new - center in view
+                const container = document.getElementById('theaterLayout');
+                const startX = (container.clientWidth / 2) - 100 + (Math.random() * 50);
+                const startY = (container.clientHeight / 4) + (Math.random() * 50);
+
+                sections.push({
+                    id: Date.now(),
+                    name,
+                    color,
+                    price,
+                    curve,
+                    skew,
+                    seatSize,
+                    seatGap,
+                    rowGap,
+                    rotation,
+                    rowIndex,
+                    hasBorder,
+                    x: startX,
+                    y: startY,
+                    rows: []
+                });
+            }
+
+            resetForm();
+            renderSections();
+            renderCanvas();
+        }
+
+        function resetForm() {
+            document.getElementById('sectionName').value = '';
+            document.getElementById('sectionPrice').value = '';
+            document.getElementById('sectionCurve').value = 0;
+            document.getElementById('sectionSkew').value = 0;
+            document.getElementById('sectionSeatSize').value = 18;
+            document.getElementById('sectionSeatGap').value = 2;
+            document.getElementById('sectionRowGap').value = 4;
+            document.getElementById('sectionRowIndex').value = 0;
+            document.getElementById('curveVal').textContent = '0';
+            document.getElementById('skewVal').textContent = '0';
+            document.getElementById('seatSizeVal').textContent = '18';
+            document.getElementById('seatGapVal').textContent = '2';
+            document.getElementById('rowGapVal').textContent = '4';
+            document.getElementById('sectionRotation').value = 0;
+            document.getElementById('rotateVal').textContent = '0';
+            document.getElementById('sectionBorder').checked = true;
+            document.getElementById('livePreview').style.transform = '';
+            document.getElementById('livePreview').style.gap = '4px';
+            document.getElementById('livePreview').querySelectorAll('.preview-seat').forEach(s => {
+                s.style.transform = '';
+                s.style.width = '12px';
+                s.style.height = '12px';
+            });
+            document.getElementById('livePreview').querySelectorAll('.preview-row').forEach(r => r.style.gap = '3px');
+            document.getElementById('sectionFormTitle').textContent = '➕ إضافة قسم جديد';
+            document.getElementById('saveSectionBtn').textContent = '➕ إضافة';
+            document.getElementById('cancelEditBtn').style.display = 'none';
+            editingSection = null;
+            updatePreview();
+        }
+
+        function cancelEdit() {
+            resetForm();
+        }
+
+        // Edit section
+        function editSection(id) {
+            const section = sections.find(s => s.id === id);
+            if (!section) return;
+
+            editingSection = id;
+            document.getElementById('sectionName').value = section.name;
+            document.getElementById('sectionColor').value = section.color;
+            document.getElementById('sectionColorText').value = section.color;
+            document.getElementById('sectionPrice').value = section.price || '';
+            document.getElementById('sectionCurve').value = section.curve;
+            document.getElementById('sectionSkew').value = section.skew;
+            document.getElementById('sectionSeatSize').value = section.seatSize || 18;
+            document.getElementById('sectionSeatGap').value = section.seatGap || 2;
+            document.getElementById('sectionRowGap').value = section.rowGap !== undefined ? section.rowGap : 4;
+            document.getElementById('sectionRotation').value = section.rotation || 0;
+            document.getElementById('sectionRowIndex').value = section.rowIndex || 0;
+            document.getElementById('curveVal').textContent = section.curve;
+            document.getElementById('skewVal').textContent = section.skew;
+            document.getElementById('seatSizeVal').textContent = section.seatSize || 18;
+            document.getElementById('seatGapVal').textContent = section.seatGap || 2;
+            document.getElementById('rowGapVal').textContent = section.rowGap !== undefined ? section.rowGap : 4;
+            document.getElementById('rotateVal').textContent = section.rotation || 0;
+            document.getElementById('sectionBorder').checked = section.hasBorder !== false;
+            document.getElementById('sectionFormTitle').textContent = '✏️ تعديل القسم';
+            document.getElementById('saveSectionBtn').textContent = '💾 حفظ';
+            document.getElementById('cancelEditBtn').style.display = 'block';
+
+            updatePreview();
+            updateCurvePreview();
+            updateSkewPreview();
+            updateSeatSizePreview();
+            updateSeatGapPreview();
+            updateRowGapPreview();
+            updateRotationPreview();
+        }
+
+        // Render sections list with Drag & Drop
+        function renderSections() {
+            const list = document.getElementById('sectionList');
+            document.getElementById('sectionCount').textContent = sections.length;
+
+            if (sections.length === 0) {
+                list.innerHTML = '<div class="empty-state" style="padding:15px"><p style="font-size:11px">لا توجد أقسام</p></div>';
+                document.getElementById('rowsSection').style.display = 'none';
+                return;
+            }
+
+            list.innerHTML = sections.map((s, index) => `
+                <div class="section-item ${selectedSectionId === s.id ? 'selected' : ''}" 
+                     draggable="true" 
+                     data-index="${index}"
+                     onclick="selectSection(${s.id})">
+                    <div style="cursor:grab;padding-left:5px;opacity:0.5">⋮⋮</div>
+                    <div class="section-color-bar" style="background:${s.color}"></div>
+                    <div class="section-info">
+                        <div class="section-name">${s.name}</div>
+                        <div class="section-details">${s.rows.length} صف • ${s.price ? '$' + s.price : 'مجاني'}</div>
+                    </div>
+                    <button class="icon-btn" onclick="event.stopPropagation();editSection(${s.id})">✏️</button>
+                    <button class="icon-btn delete" onclick="event.stopPropagation();deleteSection(${s.id})">✕</button>
+                </div>
+            `).join('');
+
+            // Add Event Listeners for Drag & Drop
+            const items = list.querySelectorAll('.section-item');
+            items.forEach(item => {
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragover', handleDragOver);
+                item.addEventListener('drop', handleDrop);
+                item.addEventListener('dragend', handleDragEnd);
+            });
+        }
+
+        // Drag & Drop Handlers
+        function handleDragStart(e) {
+            draggedItem = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) e.preventDefault();
+            return false;
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) e.stopPropagation();
+            if (draggedItem !== this) {
+                const srcIndex = parseInt(draggedItem.getAttribute('data-index'));
+                const destIndex = parseInt(this.getAttribute('data-index'));
+
+                // Swap/Move items in array
+                const item = sections.splice(srcIndex, 1)[0];
+                sections.splice(destIndex, 0, item);
+
+                // Re-render
+                renderSections();
+                renderCanvas();
+                saveToStorage();
+            }
+            return false;
+        }
+
+        function handleDragEnd() {
+            this.classList.remove('dragging');
+            draggedItem = null;
+        }
+
+        // Select section for adding rows
+        function selectSection(id) {
+            selectedSectionId = id;
+            renderSections();
+            renderCanvas();
+            editSection(id);
+
+            const section = sections.find(s => s.id === id);
+            if (section) {
+                document.getElementById('rowsSection').style.display = 'block';
+                document.getElementById('selectedSectionName').textContent = section.name;
+                renderRowsList();
+            }
+        }
+
+        // Delete section
+        function deleteSection(id) {
+            sections = sections.filter(s => s.id !== id);
+            if (selectedSectionId === id) selectedSectionId = null;
+            if (editingSection === id) resetForm();
+            renderSections();
+            renderCanvas();
+        }
+
+        // Add row to selected section
+        function addRow() {
+            const section = sections.find(s => s.id === selectedSectionId);
+            if (!section) return;
+
+            const name = document.getElementById('rowName').value.trim() || getNextRowName(section);
+            const seats = parseInt(document.getElementById('rowSeats').value) || 10;
+            const aisles = parseInt(document.getElementById('rowAisles').value) || 0;
+
+            section.rows.push({
+                id: Date.now(),
+                name,
+                aisles,
+                seats: Array.from({ length: seats }, (_, i) => ({
+                    number: i + 1,
+                    status: 'available'
+                }))
+            });
+
+            document.getElementById('rowName').value = '';
+            renderRowsList();
+            renderSections();
+            renderCanvas();
+        }
+
+        function getNextRowName(section) {
+            if (section.rows.length === 0) return 'A';
+            const last = section.rows[section.rows.length - 1].name;
+            if (last.length === 1 && last.charCodeAt(0) >= 65 && last.charCodeAt(0) < 90) {
+                return String.fromCharCode(last.charCodeAt(0) + 1);
+            }
+            return `R${section.rows.length + 1}`;
+        }
+
+        function renderRowsList() {
+            const section = sections.find(s => s.id === selectedSectionId);
+            const container = document.getElementById('rowsList');
+            if (!section || section.rows.length === 0) {
+                container.innerHTML = '<p style="font-size:10px;color:rgba(255,255,255,0.4);text-align:center">لا توجد صفوف</p>';
+                return;
+            }
+
+            container.innerHTML = section.rows.map((r, i) => `
+                <div style="display:flex;align-items:center;gap:6px;padding:6px;background:rgba(255,255,255,0.05);border-radius:5px;margin-bottom:4px;font-size:11px">
+                    <span style="flex:1">صف ${r.name} (${r.seats.length} مقعد${r.aisles > 0 ? ' • ' + r.aisles + ' ممر' : ''})</span>
+                    <button class="icon-btn" onclick="deleteRow(${i})">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function deleteRow(idx) {
+            const section = sections.find(s => s.id === selectedSectionId);
+            if (section) {
+                section.rows.splice(idx, 1);
+                renderRowsList();
+                renderSections();
+                renderCanvas();
+            }
+        }
+
+        // Render canvas with sections in rows
+        function renderCanvas() {
+            const container = document.getElementById('theaterLayout');
+            const statsBar = document.getElementById('statsBar');
+
+            if (sections.length === 0 && !backgroundImage) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🎭</div><p>ابدأ بإضافة أقسام</p></div>';
+                statsBar.style.display = 'none';
+                return;
+            }
+
+            statsBar.style.display = 'flex';
+            updateStats();
+
+            // Build background image HTML
+            let bgHTML = '';
+            if (backgroundImage) {
+                bgHTML = `<img src="${backgroundImage}" style="position:absolute; top:20px; left:50%; transform:translateX(-50%); z-index:0; max-width:none; opacity:0.5; pointer-events:none;">`;
+            }
+
+            container.innerHTML = `
+                <div id="zoomContainer" style="transform: scale(${zoomLevel}); transform-origin: top center; width: 100%; height: 100%; position:relative">
+                    ${bgHTML}
+                    ${sections.map(section => renderSection(section)).join('')}
+                </div>
+            `;
+
+            // Make sections draggable
+            sections.forEach(s => {
+                const el = document.getElementById(`section-${s.id}`);
+                if (el) makeDraggable(el, s.id);
+            });
+        }
+
+        function changeZoom(delta) {
+            zoomLevel = Math.max(0.3, Math.min(3, zoomLevel + delta));
+            renderCanvas();
+        }
+
+        function resetZoom() {
+            zoomLevel = 1;
+            renderCanvas();
+        }
+
+        function makeDraggable(el, id) {
+            let isDragging = false;
+            let startX, startY, initialLeft, initialTop;
+
+            el.addEventListener('mousedown', dragStart);
+
+            function dragStart(e) {
+                // Ignore if clicking a button or input inside
+                if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.classList.contains('seat')) return;
+
+                isDragging = true;
+                const section = sections.find(s => s.id === id);
+                initialLeft = section.x || 0;
+                initialTop = section.y || 0;
+                startX = e.clientX;
+                startY = e.clientY;
+
+                el.style.zIndex = 100;
+
+                document.addEventListener('mousemove', drag);
+                document.addEventListener('mouseup', dragEnd);
+            }
+
+            function drag(e) {
+                if (!isDragging) return;
+                e.preventDefault();
+                const dx = (e.clientX - startX) / zoomLevel;
+                const dy = (e.clientY - startY) / zoomLevel;
+
+                const newX = initialLeft + dx;
+                const newY = initialTop + dy;
+
+                el.style.left = `${newX}px`;
+                el.style.top = `${newY}px`;
+
+                // Update data
+                const section = sections.find(s => s.id === id);
+                if (section) {
+                    section.x = newX;
+                    section.y = newY;
+                }
+            }
+
+            function dragEnd() {
+                isDragging = false;
+                el.style.zIndex = 10;
+                document.removeEventListener('mousemove', drag);
+                document.removeEventListener('mouseup', dragEnd);
+                saveToStorage();
+            }
+        }
+
+
+        function renderSection(section) {
+            // Calculate section dimensions based on rows
+            const seatSize = section.seatSize || 18;
+            const seatGap = section.seatGap || 2;
+            const rowGap = section.rowGap !== undefined ? section.rowGap : 4;
+            const padding = 15;
+            const labelPadding = 25;
+
+            // Calculate width for each row
+            const rowWidths = section.rows.map(row => {
+                const aisles = row.aisles || 0;
+                return row.seats.length * seatSize + (row.seats.length - 1) * seatGap + (aisles * 12);
+            });
+
+            const maxWidth = Math.max(...rowWidths, 60);
+            const totalHeight = section.rows.length * (seatSize + rowGap) + labelPadding;
+
+            // Build SVG path for curved border following seat shapes
+            const svgWidth = maxWidth + padding * 2 + 50; // extra for labels
+            const svgHeight = totalHeight + padding * 2;
+
+            // Calculate curve parameters
+            const curveIntensity = (section.curve || 0) / 100;
+            const skewAngle = section.skew || 0;
+            const rotationAngle = section.rotation || 0;
+
+            // Generate path points for each row
+            let pathPoints = [];
+            const centerX = svgWidth / 2;
+
+            // Top edge points (first row)
+            if (section.rows.length > 0) {
+                const firstRowWidth = rowWidths[0] || 60;
+                const leftX = centerX - firstRowWidth / 2 - 10;
+                const rightX = centerX + firstRowWidth / 2 + 10;
+                const topY = padding;
+
+                // Apply curve to top
+                const topCurveOffset = curveIntensity * 15;
+                pathPoints.push({ x: leftX, y: topY - topCurveOffset, type: 'start' });
+                pathPoints.push({ x: centerX, y: topY, type: 'top-center' });
+                pathPoints.push({ x: rightX, y: topY - topCurveOffset, type: 'top-right' });
+            }
+
+            // Right edge points (going down)
+            section.rows.forEach((row, i) => {
+                const rowWidth = rowWidths[i] || 60;
+                const y = padding + labelPadding + i * (seatSize + rowGap);
+                const rightX = centerX + rowWidth / 2 + 10;
+                const curveOffset = curveIntensity * 15;
+                pathPoints.push({ x: rightX, y: y - curveOffset, type: 'right' });
+            });
+
+            // Bottom edge
+            if (section.rows.length > 0) {
+                const lastRowWidth = rowWidths[rowWidths.length - 1] || 60;
+                const bottomY = padding + totalHeight;
+                const leftX = centerX - lastRowWidth / 2 - 10;
+                const rightX = centerX + lastRowWidth / 2 + 10;
+                const curveOffset = curveIntensity * 15;
+
+                pathPoints.push({ x: rightX, y: bottomY - curveOffset, type: 'bottom-right' });
+                pathPoints.push({ x: centerX, y: bottomY, type: 'bottom-center' });
+                pathPoints.push({ x: leftX, y: bottomY - curveOffset, type: 'bottom-left' });
+            }
+
+            // Left edge points (going up)
+            for (let i = section.rows.length - 1; i >= 0; i--) {
+                const rowWidth = rowWidths[i] || 60;
+                const y = padding + labelPadding + i * (seatSize + rowGap);
+                const leftX = centerX - rowWidth / 2 - 10;
+                const curveOffset = curveIntensity * 15;
+                pathPoints.push({ x: leftX, y: y - curveOffset, type: 'left' });
+            }
+
+            // Create SVG path with smooth curves
+            let pathD = '';
+            if (pathPoints.length > 0) {
+                pathD = `M ${pathPoints[0].x} ${pathPoints[0].y}`;
+                for (let i = 1; i < pathPoints.length; i++) {
+                    const prev = pathPoints[i - 1];
+                    const curr = pathPoints[i];
+                    // Use quadratic curves for smoother transitions
+                    const cpX = (prev.x + curr.x) / 2;
+                    const cpY = (prev.y + curr.y) / 2;
+                    pathD += ` Q ${prev.x} ${prev.y} ${cpX} ${cpY}`;
+                }
+                pathD += ' Z';
+            }
+
+            const transforms = [];
+            if (skewAngle !== 0) transforms.push(`skewX(${skewAngle}deg)`);
+            if (rotationAngle !== 0) transforms.push(`rotate(${rotationAngle}deg)`);
+
+            const transformStyle = transforms.length > 0 ? `transform: ${transforms.join(' ')};` : '';
+
+            // Border rendering logic
+            let borderSVG = '';
+            if (section.hasBorder !== false) {
+                borderSVG = `
+                    <svg width="${svgWidth}" height="${svgHeight}" style="position:absolute;top:-15px;left:50%;transform:translateX(-50%);pointer-events:none;overflow:visible">
+                        <path d="${pathD}" fill="none" stroke="${section.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                `;
+            }
+
+            return `
+                <div id="section-${section.id}" 
+                     class="theater-section ${selectedSectionId === section.id ? 'selected' : ''}"
+                     style="left:${section.x || 0}px; top:${section.y || 0}px; ${transformStyle}"
+                     onclick="selectSection(${section.id})">
+                    ${borderSVG}
+                
+                    <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:${rowGap}px;padding-top:10px">
+                        ${section.rows.map(row => renderRow(section, row)).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderRow(section, row) {
+            const seatsArr = row.seats;
+            const aisles = row.aisles || 0;
+            const seatGap = section.seatGap || 2;
+
+            let seatsHTML = '';
+            if (aisles > 0) {
+                // Distribute seats with aisles
+                const seatGroups = [];
+                const groupSize = Math.ceil(seatsArr.length / (aisles + 1));
+                for (let i = 0; i < seatsArr.length; i += groupSize) {
+                    seatGroups.push(seatsArr.slice(i, i + groupSize));
+                }
+
+                seatsHTML = seatGroups.map((group, gi) => {
+                    const groupSeats = group.map((s, si) => {
+                        const globalIdx = gi * groupSize + si;
+                        return renderSeat(section, row, s, globalIdx, seatsArr.length);
+                    }).join('');
+                    return groupSeats + (gi < seatGroups.length - 1 ? '<div class="aisle"></div>' : '');
+                }).join('');
+            } else {
+                seatsHTML = seatsArr.map((s, i) => renderSeat(section, row, s, i, seatsArr.length)).join('');
+            }
+
+            return `
+                <div class="seat-row">
+                    <div class="row-label">${row.name}</div>
+                    <div class="seats-wrapper" style="gap:${seatGap}px">${seatsHTML}</div>
+                    <div class="row-label">${row.name}</div>
+                </div>
+            `;
+        }
+
+        function renderSeat(section, row, seat, index, total) {
+            const statusClass = seat.status !== 'available' ? seat.status : '';
+            const seatSize = section.seatSize || 18;
+            const fontSize = Math.max(7, Math.floor(seatSize * 0.4));
+
+            // Curve transform
+            let transform = '';
+            if (section.curve > 0) {
+                const intensity = section.curve / 100;
+                const normalized = total > 1 ? (index - (total - 1) / 2) / ((total - 1) / 2) : 0;
+                const yOffset = Math.pow(normalized, 2) * intensity * 15;
+                const rotation = normalized * intensity * 8;
+                transform = `transform: translateY(-${yOffset}px) rotate(${rotation}deg);`;
+            }
+
+            let background = seat.status === 'skipped' ? '' : section.color;
+            let border = 'none';
+            let color = 'white';
+            let content = seat.status === 'available' ? seat.number : '';
+
+            if (seat.status === 'selected') {
+                background = '#ffffff';
+                border = `2px solid ${section.color}`;
+                color = section.color;
+                content = '✓';
+            }
+
+            return `
+                <div class="seat ${statusClass}"
+                     style="width:${seatSize}px; height:${seatSize}px; font-size:${fontSize}px; background:${background}; border:${border}; color:${color}; ${transform}"
+                     onclick="event.stopPropagation();handleSeatClick(${section.id}, ${row.id}, ${seat.number})"
+                     title="صف ${row.name} - مقعد ${seat.number}">
+                    ${content}
+                </div>
+            `;
+        }
+
+        function handleSeatClick(sectionId, rowId, seatNum) {
+            const section = sections.find(s => s.id === sectionId);
+            if (!section) return;
+            const row = section.rows.find(r => r.id === rowId);
+            if (!row) return;
+            const seat = row.seats.find(s => s.number === seatNum);
+            if (!seat) return;
+
+            if (currentTool === 'skip') {
+                seat.status = seat.status === 'skipped' ? 'available' : 'skipped';
+            } else if (currentTool === 'pin') {
+                seat.status = seat.status === 'pinned' ? 'available' : 'pinned';
+            } else {
+                seat.status = seat.status === 'selected' ? 'available' : 'selected';
+            }
+
+            renderCanvas();
+        }
+
+        function setTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tool + 'Tool').classList.add('active');
+        }
+
+        function updateStats() {
+            let seats = 0, rows = 0;
+            sections.forEach(s => {
+                rows += s.rows.length;
+                s.rows.forEach(r => seats += r.seats.filter(seat => seat.status !== 'skipped').length);
+            });
+            document.getElementById('totalSeats').textContent = seats;
+            document.getElementById('totalSections').textContent = sections.length;
+            document.getElementById('totalRows').textContent = rows;
+        }
+
+        // LocalStorage persistence
+        function saveToStorage() {
+            const data = {
+                theaterName: document.getElementById('theaterName').value,
+                sections: sections
+            };
+            localStorage.setItem('theaterBuilderData', JSON.stringify(data));
+        }
+
+        function loadFromStorage() {
+            try {
+                const saved = localStorage.getItem('theaterBuilderData');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    sections = data.sections || [];
+                    document.getElementById('theaterName').value = data.theaterName || '';
+                    renderSections();
+                    renderCanvas();
+                }
+            } catch (e) {
+                console.error('Error loading saved data:', e);
+            }
+        }
+
+        // Auto-save after any change
+        const originalRenderCanvas = renderCanvas;
+        renderCanvas = function () {
+            originalRenderCanvas();
+            saveToStorage();
+        };
+
+        function clearAll() {
+            if (confirm('مسح كل البيانات؟')) {
+                sections = [];
+                selectedSectionId = null;
+                editingSection = null;
+                localStorage.removeItem('theaterBuilderData');
+                resetForm();
+                renderSections();
+                renderCanvas();
+            }
+        }
+
+        function exportData() {
+            const data = { name: document.getElementById('theaterName').value, sections };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'theater-layout.json';
+            a.click();
+        }
+
+        function previewTheater() {
+            const styles = Array.from(document.querySelectorAll('style')).map(s => s.outerHTML).join('');
+            const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]')).map(l => l.outerHTML).join('');
+
+            const preview = window.open('', '_blank');
+            preview.document.write(`
+                <html>
+                <head>
+                    <title>معاينة المسرح - ${document.getElementById('theaterName').value || 'المسرح'}</title>
+                    ${links}
+                    ${styles}
+                    <style>
+                        body {
+                            background: #1a1a2e;
+                            overflow: auto;
+                            padding: 20px;
+                        }
+                        .preview-container {
+                            position: relative;
+                            width: 100%;
+                            height: 100vh;
+                            display: flex;
+                            justify-content: center;
+                            align-items: flex-start;
+                        }
+                        /* Hide edit controls in preview if any accidentally leaked */
+                        .icon-btn, .delete { display: none !important; }
+                    </style>
+                </head>
+                <body>
+                    <div style="text-align:center; margin-bottom: 20px;">
+                        <h1 style="color:white; margin:0;">${document.getElementById('theaterName').value || 'المسرح'}</h1>
+                    </div>
+                    <div class="theater-layout" style="border:none; box-shadow:none; height: auto; min-height: 800px; overflow:visible;">
+                        ${document.getElementById('theaterLayout').innerHTML}
+                    </div>
+                </body>
+                </html>
+            `);
+            preview.document.close();
+        }
+
+        // Save theater name on change
+        document.getElementById('theaterName').addEventListener('input', saveToStorage);
+
+        // Init
+        renderCategoryPresets();
+        updatePreview();
+        setTool('select');
+        loadFromStorage();
+    </script>
+</body>
+
+</html>
