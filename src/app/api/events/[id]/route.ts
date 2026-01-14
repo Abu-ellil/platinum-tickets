@@ -62,10 +62,10 @@ export async function PUT(
     }
 
     return NextResponse.json({ success: true, data: event });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating event:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to update event' },
+      { success: false, error: error instanceof Error ? error.message : 'Failed to update event' },
       { status: 500 }
     );
   }

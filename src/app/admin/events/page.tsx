@@ -27,6 +27,7 @@ import {
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Event, Venue, Artist } from "@/lib/types";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -47,6 +48,30 @@ interface ShowTime {
     time: string;
 }
 
+interface Category {
+    _id: string;
+    name: {
+        ar: string;
+        en: string;
+    };
+    id: string;
+    label: {
+        ar: string;
+        en: string;
+    };
+    slug: string;
+    color: string;
+    defaultPrice: number;
+}
+
+interface City {
+    _id: string;
+    name: {
+        ar: string;
+        en: string;
+    };
+}
+
 interface CategoryPrice {
     categoryId: string;
     label: string;
@@ -54,31 +79,16 @@ interface CategoryPrice {
     color: string;
 }
 
-interface IEvent {
-    _id: string;
-    title: string;
-    venueId?: { _id: string; name: any };
-    venueName?: string;
-    description?: string;
-    cityId: { _id: string; name: any };
-    image: string;
-    pricing: { categoryId: string; price: number }[];
-    currency: string;
-    status: string;
-    type: string;
-    showTimes: { date: string; time: string }[];
-}
-
 export default function EventsManagement() {
     const { language, dir } = useLanguage();
     const searchParams = useSearchParams();
-    const [events, setEvents] = useState<IEvent[]>([]);
+    const [events, setEvents] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     // Data for dropdowns
-    const [cities, setCities] = useState<any[]>([]);
-    const [venues, setVenues] = useState<any[]>([]);
-    const [categories, setCategories] = useState<any[]>([]);
+    const [cities, setCities] = useState<City[]>([]);
+    const [venues, setVenues] = useState<Venue[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
     const [isAddOpen, setIsAddOpen] = useState(searchParams.get("add") === "true");
 
     // Form state
@@ -90,7 +100,7 @@ export default function EventsManagement() {
     const [eventTitle, setEventTitle] = useState("");
     const [showTimes, setShowTimes] = useState<ShowTime[]>([{ id: "1", date: "", time: "" }]);
     const [categoryPrices, setCategoryPrices] = useState<CategoryPrice[]>([]);
-    const [editingEvent, setEditingEvent] = useState<IEvent | null>(null);
+    const [editingEvent, setEditingEvent] = useState<Event | null>(null);
     const [imageUrl, setImageUrl] = useState("");
     const [isUploading, setIsUploading] = useState(false);
     const [currency, setCurrency] = useState("EGP");
@@ -167,28 +177,33 @@ export default function EventsManagement() {
         }
     };
 
-    const handleEdit = async (event: IEvent) => {
+    const handleEdit = async (event: Event) => {
         setEditingEvent(event);
         setEventTitle(event.title);
-        setSelectedCity(event.cityId._id);
+        const cityId = typeof event.cityId === 'object' ? event.cityId._id : event.cityId;
+        setSelectedCity(cityId);
         
         // Fetch venues for this city first
         try {
-            const res = await fetch(`/api/venues?cityId=${event.cityId._id}`);
+            const res = await fetch(`/api/venues?cityId=${cityId}`);
             const json = await res.json();
             if (json.success) {
                 setVenues(json.data);
                 
                 // After venues are loaded, set the selected venue
-                const vId = event.venueId?._id;
+                const vObj = typeof event.venueId === 'object' ? event.venueId : null;
+                const vId = vObj ? vObj._id : (typeof event.venueId === 'string' ? event.venueId : null);
+                
                 if (vId) {
                     setSelectedVenue(vId);
-                    setVenueInput(event.venueId?.name?.[language] || event.venueId?.name?.en || "");
+                    if (vObj) {
+                        setVenueInput(vObj.name?.[language as keyof typeof vObj.name] || vObj.name?.en || "");
+                    }
                     
-                    const venue = json.data.find((v: any) => v._id === vId);
+                    const venue = json.data.find((v: Venue) => v._id === vId);
                     if (venue && venue.categories) {
-                        setCategoryPrices(venue.categories.map((cat: any) => {
-                            const eventPrice = event.pricing?.find((p: any) => p.categoryId === cat.id);
+                        setCategoryPrices(venue.categories.map((cat: { id: string; label: string; color: string; defaultPrice: number }) => {
+                            const eventPrice = event.pricing?.find((p: { categoryId: string; price: number }) => p.categoryId === cat.id);
                             return {
                                 categoryId: cat.id,
                                 label: cat.label,
@@ -212,7 +227,7 @@ export default function EventsManagement() {
         setImageUrl(event.image);
         
         if (event.showTimes && event.showTimes.length > 0) {
-            setShowTimes(event.showTimes.map((st: any, idx: number) => ({
+            setShowTimes(event.showTimes.map((st: { date: string | Date; time: string }, idx: number) => ({
                 id: idx.toString(),
                 date: new Date(st.date).toISOString().split('T')[0],
                 time: st.time || new Date(st.date).toTimeString().split(' ')[0].substring(0, 5)
@@ -380,11 +395,19 @@ export default function EventsManagement() {
 
     const filteredEvents = events.filter(event => {
         const titleMatch = (event.title || "").toLowerCase().includes(searchTerm.toLowerCase());
-        const venueNameStr = event.venueId?.name?.[language] || event.venueName || "";
-        const cityNameStr = event.cityId?.name?.[language] || "";
-        const locationMatch = venueNameStr.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                             cityNameStr.toLowerCase().includes(searchTerm.toLowerCase());
-        return titleMatch || locationMatch;
+        
+        const venueName = typeof event.venueId === 'object' && event.venueId !== null 
+            ? (event.venueId.name?.[language as keyof typeof event.venueId.name] || event.venueId.name?.en || "") 
+            : (event.venueName || "");
+            
+        const cityName = typeof event.cityId === 'object' && event.cityId !== null
+            ? (event.cityId.name?.[language as keyof typeof event.cityId.name] || event.cityId.name?.en || "")
+            : "";
+            
+        const venueMatch = venueName.toLowerCase().includes(searchTerm.toLowerCase());
+        const cityMatch = cityName.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        return titleMatch || venueMatch || cityMatch;
     });
 
     return (
@@ -496,9 +519,9 @@ export default function EventsManagement() {
                                                 if (venue) {
                                                     setSelectedVenue(venue._id);
                                                     if (venue.categories) {
-                                                        setCategoryPrices(venue.categories.map((cat: any) => ({
+                                                        setCategoryPrices(venue.categories.map((cat: { id: string; label: string | { ar: string; en: string }; defaultPrice: number; color: string }) => ({
                                                             categoryId: cat.id,
-                                                            label: cat.label,
+                                                            label: typeof cat.label === 'string' ? cat.label : (language === 'ar' ? cat.label.ar : cat.label.en),
                                                             price: cat.defaultPrice || 0,
                                                             color: cat.color || '#3b82f6'
                                                         })));
@@ -735,7 +758,9 @@ export default function EventsManagement() {
                                             <div className="flex items-center gap-2 text-gray-600">
                                                 <MapPin className="h-4 w-4" />
                                                 <span className="text-sm truncate max-w-[150px]">
-                                                    {event.venueId?.name?.[language] || event.venueName || '---'}
+                                                    {typeof event.venueId === 'object' && event.venueId !== null 
+                                                        ? (event.venueId.name?.[language as keyof typeof event.venueId.name] || event.venueId.name?.en || '---')
+                                                        : (event.venueName || '---')}
                                                 </span>
                                             </div>
                                         </td>
@@ -836,7 +861,9 @@ export default function EventsManagement() {
                                     <div className="flex items-center gap-2 text-gray-500 bg-gray-50 p-2 rounded-xl">
                                         <MapPin className="h-3 w-3" />
                                         <span className="truncate">
-                                            {event.venueId?.name?.[language] || event.venueName || '---'}
+                                            {typeof event.venueId === 'object' && event.venueId !== null 
+                                                ? (event.venueId.name?.[language as keyof typeof event.venueId.name] || event.venueId.name?.en || '---')
+                                                : (event.venueName || '---')}
                                         </span>
                                     </div>
                                 </div>

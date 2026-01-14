@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import { EventCard } from "@/components/event-card";
 import { Button } from "@/components/ui/button";
 import { SlidersHorizontal } from "lucide-react";
+import { Event } from "@/lib/types";
 
 export default function EventsPage() {
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

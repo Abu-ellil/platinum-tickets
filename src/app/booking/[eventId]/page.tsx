@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import TheaterLayout from "./TheaterLayout";
 import PaymentForm from "./PaymentForm";
 import { useLanguage } from "@/lib/language-context";
+import { Event } from "@/lib/types";
 
 export default function BookingPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = use(params);
@@ -19,7 +20,7 @@ export default function BookingPage({ params }: { params: Promise<{ eventId: str
     sectionName: string;
   }[]>([]);
   const [showSummary, setShowSummary] = useState(false);
-  const [event, setEvent] = useState<any>(null);
+  const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -67,7 +68,7 @@ export default function BookingPage({ params }: { params: Promise<{ eventId: str
     return (
       <TheaterLayout
         title={event.title}
-        subtitle={`${event.venueId?.name?.[language] || event.venueName} • ${event.showTimes?.[0]?.date ? new Date(event.showTimes[0].date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US') : ''}`}
+        subtitle={`${(event.venueId && typeof event.venueId === 'object' && 'name' in event.venueId) ? event.venueId.name[language as keyof typeof event.venueId.name] : (event.venueName || "")} • ${event.showTimes?.[0]?.date ? new Date(event.showTimes[0].date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US') : ''}`}
         currency={event.currency || 'SAR'}
         onContinue={(seats) => {
           setSelectedSeats(seats.map(s => ({

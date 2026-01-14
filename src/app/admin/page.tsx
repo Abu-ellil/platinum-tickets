@@ -18,12 +18,13 @@ import {
     LayoutDashboard
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Event, Venue, Artist } from "@/lib/types";
 
 export default function AdminDashboard() {
     const { language } = useLanguage();
-    const [events, setEvents] = useState<any[]>([]);
-    const [artists, setArtists] = useState<any[]>([]);
-    const [venues, setVenues] = useState<any[]>([]);
+    const [events, setEvents] = useState<Event[]>([]);
+    const [artists, setArtists] = useState<Artist[]>([]);
+    const [venues, setVenues] = useState<Venue[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -212,12 +213,14 @@ export default function AdminDashboard() {
                                     </p>
                                     <p className="text-xs text-gray-400 font-bold truncate uppercase mt-1 flex items-center gap-1">
                                         <MapPin className="h-3 w-3" />
-                                        {event.venueId?.name[language] || event.venueId?.name.en || event.venueId?.name.ar || ""}
+                                        {typeof event.venueId === 'object' && event.venueId !== null ? (
+                                            event.venueId.name[language as keyof typeof event.venueId.name] || event.venueId.name.en || event.venueId.name.ar || ""
+                                        ) : ""}
                                     </p>
                                 </div>
                                 <div className="text-right">
                                     <p className="font-black text-blue-600 text-base">
-                                        {event.pricing && event.pricing.length > 0 ? Math.min(...event.pricing.map((p: any) => p.price)) : 0} 
+                                        {event.pricing && event.pricing.length > 0 ? Math.min(...event.pricing.map((p) => p.price)) : 0} 
                                         <span className="text-[10px] ms-1">{event.currency}</span>
                                     </p>
                                 </div>

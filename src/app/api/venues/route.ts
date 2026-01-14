@@ -20,10 +20,10 @@ export async function GET(request: NextRequest) {
       .lean();
     
     return NextResponse.json({ success: true, data: venues });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching venues:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch venues' },
+      { success: false, error: error instanceof Error ? error.message : 'Failed to fetch venues' },
       { status: 500 }
     );
   }

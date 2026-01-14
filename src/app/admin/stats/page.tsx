@@ -137,7 +137,7 @@ export default function StatsManagement() {
                     <div className="bg-blue-600 rounded-2xl p-8 text-white relative overflow-hidden">
                         <div className="relative z-10">
                             <h3 className="text-xl font-bold mb-2">معلومة سريعة</h3>
-                            <p className="text-blue-100 opacity-90 leading-relaxed">الأرقام التي تقوم بتعديلها هنا تظهر فوراً في قسم "عن الشركة" و "الأرقام القياسية" في الصفحة الرئيسية.</p>
+                            <p className="text-blue-100 opacity-90 leading-relaxed">الأرقام التي تقوم بتعديلها هنا تظهر فوراً في قسم &quot;عن الشركة&quot; و &quot;الأرقام القياسية&quot; في الصفحة الرئيسية.</p>
                             <Button variant="secondary" className="mt-6 font-bold text-blue-600 bg-white hover:bg-blue-50 border-none h-11 px-8 rounded-xl shadow-lg">
                                 {language === 'ar' ? 'معاينة الموقع' : 'Preview Site'}
                             </Button>

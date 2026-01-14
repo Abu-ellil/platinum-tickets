@@ -3009,7 +3009,7 @@ export default function TheaterLayout({
   }
 ];
   const globalSeatSize = 18;
-  const overlayImage = (overlayImageFile as any).src || overlayImageFile;
+  const overlayImage = typeof overlayImageFile === 'string' ? overlayImageFile : overlayImageFile.src;
 
   // State for selected seats
   const [selectedSeats, setSelectedSeats] = useState<{
@@ -3158,7 +3158,13 @@ export default function TheaterLayout({
       setLastTouchDistance(null);
   };
 
-  const handleSeatClick = (e: React.MouseEvent, newSeat: any) => {
+  const handleSeatClick = (e: React.MouseEvent, newSeat: {
+      sectionId: number;
+      rowName: string;
+      seatNumber: number;
+      price: number;
+      sectionName: string;
+  }) => {
       e.stopPropagation();
 
       setSelectedSeats(prev => {
@@ -3179,7 +3185,7 @@ export default function TheaterLayout({
   };
 
   const categories = Array.from(new Set(sections.map(s => JSON.stringify({ color: s.color, price: s.price }))))
-    .map(s => JSON.parse(s));
+    .map(s => JSON.parse(s) as { color: string; price: number });
 
   const overlayOpacity = scale < DETAIL_THRESHOLD ? 1 : 0;
 
@@ -3289,7 +3295,7 @@ export default function TheaterLayout({
                       >
                           {scale < DETAIL_THRESHOLD ? null : (
                               <>
-                                  {section.rows.map((row: any) => (
+                                  {section.rows.map((row: Row) => (
                                       <div
                                           key={row.id}
                                           className={styles.row}
@@ -3298,7 +3304,7 @@ export default function TheaterLayout({
                                               marginBottom: section.rowGap + 'px',
                                           }}
                                       >
-                                          {row.seats.map((seat: any, seatIndex: number) => {
+                                          {row.seats.map((seat: Seat, seatIndex: number) => {
                                               const isSelected = selectedSeats.some(s =>
                                                   s.sectionId === section.id &&
                                                   s.rowName === row.name &&
@@ -3359,7 +3365,7 @@ export default function TheaterLayout({
           <div className={styles.footer}>
               <div className={styles.priceContainer}>
                   <div className={styles.priceScroll}>
-                      {categories.map((cat: any, i: number) => (
+                      {categories.map((cat, i) => (
                           <div
                               key={i}
                               className={styles.priceChip}

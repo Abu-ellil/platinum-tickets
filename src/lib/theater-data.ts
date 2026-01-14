@@ -22,8 +22,8 @@ export const getTheaterConfig = (eventId: string, customPricing?: { categoryId: 
       const categoryInfo = categories[categoryId];
       
       if (categoryInfo) {
-        (section as any).color = categoryInfo.color;
-        (section as any).price = categoryInfo.price;
+        section.color = categoryInfo.color;
+        section.price = categoryInfo.price;
       }
 
       section.rows.forEach(row => {
@@ -41,8 +41,8 @@ export const getTheaterConfig = (eventId: string, customPricing?: { categoryId: 
       const categoryId = section.priceCategory as StageCategory;
       const categoryInfo = categories[categoryId];
       if (categoryInfo) {
-        (section as any).color = categoryInfo.color;
-        (section as any).price = categoryInfo.price;
+        section.color = categoryInfo.color;
+        section.price = categoryInfo.price;
       }
     });
   }

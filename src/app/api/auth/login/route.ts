@@ -47,12 +47,12 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ message: "Login successful" });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Login Error:", error);
     return NextResponse.json(
       { 
         message: "Internal Server Error",
-        error: process.env.NODE_ENV === "development" ? error.message : undefined
+        error: error instanceof Error ? error.message : "Unknown error"
       },
       { status: 500 }
     );

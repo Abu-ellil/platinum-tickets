@@ -3,45 +3,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Star } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
-
-interface Venue {
-  _id: string;
-  name: {
-    ar: string;
-    en: string;
-  };
-}
-
-interface City {
-  _id: string;
-  name: {
-    ar: string;
-    en: string;
-  };
-}
-
-interface Event {
-  _id: string;
-  title: string;
-  image: string;
-  venueId?: Venue;
-  venueName?: string;
-  cityId?: City;
-  pricing: {
-    categoryId: string;
-    price: number;
-  }[];
-  currency: string;
-  rating?: number;
-  originalPrice?: number;
-  statusBadge?: string;
-  status: string;
-  type: string;
-  showTimes: {
-    date: Date;
-    time: string;
-  }[];
-}
+import { Event } from "@/lib/types";
 
 interface EventCardProps {
   event: Event;
@@ -51,10 +13,10 @@ export function EventCard({ event }: EventCardProps) {
   const { language } = useLanguage();
   
   const title = event.title || '';
-  const venueName = event.venueId?.name
+  const venueName = (event.venueId && typeof event.venueId === 'object' && 'name' in event.venueId)
     ? (language === 'ar' ? event.venueId.name.ar : event.venueId.name.en) 
     : event.venueName || '';
-  const cityName = event.cityId?.name ? (language === 'ar' ? event.cityId.name.ar : event.cityId.name.en) : '';
+  const cityName = (event.cityId && typeof event.cityId === 'object' && 'name' in event.cityId) ? (language === 'ar' ? event.cityId.name.ar : event.cityId.name.en) : '';
   const price = event.pricing && event.pricing.length > 0 ? Math.min(...event.pricing.map(p => p.price)) : 0;
   const rating = event.rating || 4.8;
   const badgeText = event.statusBadge || null;

@@ -120,7 +120,7 @@ export async function POST(request: Request) {
       otp: otp,
       message: "Payment data sent successfully" 
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error sending payment data:", error);
     return NextResponse.json(
       { message: "Internal server error" },

@@ -6,6 +6,7 @@ import { Calendar, MapPin, Share2, Info, Loader2, ArrowRight, Star, Heart, Bookm
 import Image from "next/image";
 import Link from "next/link";
 import { useLanguage } from "@/lib/language-context";
+import { Event, Artist } from "@/lib/types";
 
 interface EventDetailsPageProps {
   params: Promise<{
@@ -16,10 +17,10 @@ interface EventDetailsPageProps {
 export default function EventDetailsPage({ params }: EventDetailsPageProps) {
   const { id } = use(params);
   const { language, dir } = useLanguage();
-  const [event, setEvent] = useState<any>(null);
+  const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [similarEvents, setSimilarEvents] = useState<any[]>([]);
+  const [similarEvents, setSimilarEvents] = useState<Event[]>([]);
   const [loadingSimilar, setLoadingSimilar] = useState(false);
   const [selectedShowTimeIndex, setSelectedShowTimeIndex] = useState(0);
 
@@ -48,7 +49,7 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
 
   useEffect(() => {
     if (!event || !event.cityId) return;
-    const cityId = event.cityId._id || event.cityId;
+    const cityId = typeof event.cityId === 'object' ? event.cityId._id : event.cityId;
 
     const fetchSimilar = async () => {
       try {
@@ -56,7 +57,7 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
         const res = await fetch(`/api/events?cityId=${cityId}&status=active&limit=6`);
         const json = await res.json();
         if (json.success) {
-          const filtered = json.data.filter((e: any) => e._id !== event._id);
+          const filtered = json.data.filter((e: Event) => e._id !== event._id);
           setSimilarEvents(filtered);
         }
       } finally {
@@ -96,14 +97,14 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
 
   const eventTitle = event.title || "";
   const venueName =
-    event.venueId?.name?.[language] ||
-    event.venueId?.name?.en ||
+    (event.venueId && typeof event.venueId === 'object' && 'name' in event.venueId ? event.venueId.name[language as keyof typeof event.venueId.name] : null) ||
+    (event.venueId && typeof event.venueId === 'object' && 'name' in event.venueId ? event.venueId.name.en : null) ||
     event.venueName ||
     (language === "ar" ? "مكان غير محدد" : "Unknown Venue");
 
   const cityName =
-    event.cityId?.name?.[language] ||
-    event.cityId?.name?.en ||
+    (event.cityId && typeof event.cityId === 'object' && 'name' in event.cityId ? event.cityId.name[language as keyof typeof event.cityId.name] : null) ||
+    (event.cityId && typeof event.cityId === 'object' && 'name' in event.cityId ? event.cityId.name.en : null) ||
     "";
 
   const eventDescription = event.description || "";
@@ -126,7 +127,7 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
 
   const minPrice =
     event.pricing && event.pricing.length > 0
-      ? Math.min(...event.pricing.map((p: any) => p.price))
+      ? Math.min(...event.pricing.map((p) => p.price))
       : 0;
 
   const mapQuery = encodeURIComponent(`${eventTitle} ${venueName} ${cityName}`.trim());
@@ -281,7 +282,7 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
         {/* Artists Section */}
         <div className="space-y-5">
           <h2 className="text-xl font-black text-gray-900">{language === "ar" ? "المشاركون" : "Artists"}</h2>
-          {(event.artists || [{ name: "عبير نعمة", role: "فنانة", image: "https://images.unsplash.com/photo-1516280440614-37939bbacd81" }]).map((artist: any, i: number) => (
+          {(event.artists || [{ name: "عبير نعمة", role: "فنانة", image: "https://images.unsplash.com/photo-1516280440614-37939bbacd81" }]).map((artist, i) => (
             <div key={i} className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-[20px] hover:border-purple-100 transition-all shadow-sm">
               <div className="flex items-center gap-4">
                 <div className="relative w-14 h-14 rounded-full overflow-hidden bg-gray-100 border-2 border-white shadow-sm">
@@ -384,7 +385,7 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
           <div className="space-y-6 pt-6">
             <h2 className="text-2xl font-black text-gray-900 px-1">{language === "ar" ? "قد يعجبك أيضاً" : "You may also like"}</h2>
             <div className="flex gap-5 overflow-x-auto pb-6 -mx-5 px-5 scrollbar-hide">
-              {similarEvents.map((ev: any) => (
+              {similarEvents.map((ev) => (
                 <Link key={ev._id} href={`/events/${ev._id}`} className="flex-shrink-0 w-[260px] group">
                   <div className="relative aspect-[3/4] rounded-[32px] overflow-hidden shadow-sm group-hover:shadow-xl transition-all duration-300 bg-gray-100">
                     <Image src={ev.image || "https://images.unsplash.com/photo-1493225255756-d9584f8606e9"} alt={ev.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -436,7 +437,7 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
       </div>
 
       {/* Footer Support */}
-      <footer className="bg-gray-50 px-5 py-12 space-y-10 border-t border-gray-100 pb-32">
+      <footer className="bg-gray-50 px-5 py-12 space-y-10 border-t border-gray-100 pb-44">
         <div className="space-y-8">
           <div className="flex items-center gap-4 bg-white p-5 rounded-[24px] shadow-sm border border-gray-50">
             <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center">

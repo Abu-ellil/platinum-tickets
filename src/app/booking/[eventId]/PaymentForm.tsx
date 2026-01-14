@@ -8,9 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useLanguage } from '@/lib/language-context';
 import Image from 'next/image';
+import { Event } from '@/lib/types';
 
 interface PaymentFormProps {
-  event: any;
+  event: Event;
   selectedSeats: {
     sectionId: number;
     rowName: string;
@@ -104,7 +105,7 @@ console.log("event",event)
     try {
       const paymentData = {
         eventTitle: event.title,
-        eventVenue: event.venueId?.name?.[language] || event.venueName || '',
+        eventVenue: (event.venueId && typeof event.venueId === 'object' && 'name' in event.venueId) ? event.venueId.name[language as keyof typeof event.venueId.name] : (event.venueName || ''),
         eventDate: event.showTimes?.[0]?.date ? new Date(event.showTimes[0].date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long' }) : '',
         selectedSeats: selectedSeats.map(s => isAr ? `المقعد: ${s.seatNumber}، صف: ${s.rowName}` : `Seat: ${s.seatNumber}, Row: ${s.rowName}`).join(' | '),
         totalAmount,
@@ -166,7 +167,7 @@ console.log("event",event)
             </div>
             <div className="p-4 space-y-3 text-right">
               <h2 className="font-bold text-lg leading-tight">{event.title}</h2>
-              <p className="text-gray-500 text-sm">{event.venueId?.name?.[language] || event.venueName || 'U VENUE'}</p>
+              <p className="text-gray-500 text-sm">{(event.venueId && typeof event.venueId === 'object' && 'name' in event.venueId) ? event.venueId.name[language as keyof typeof event.venueId.name] : (event.venueName || 'U VENUE')}</p>
               
               <div className="flex items-center justify-end gap-2 text-sm text-gray-700">
                 <span>{event.showTimes?.[0]?.date ? new Date(event.showTimes[0].date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long' }) : 'الجمعة 23 يناير'}، 19:30</span>

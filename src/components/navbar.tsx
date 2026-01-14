@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Menu, Search, UserRound, Globe, Ticket, ChevronLeft, ChevronRight, X, Phone, Users, MapPin, BadgeDollarSign, MoreHorizontal, LayoutDashboard } from "lucide-react";
 import { FaUser } from "react-icons/fa";
 
@@ -27,9 +28,12 @@ const NAV_LINKS = [
 ];
 
 export function Navbar() {
+  const pathname = usePathname();
   const { language, setLanguage, t, dir } = useLanguage();
   const [isScrolled, setIsScrolled] = useState(false);
   const [userCity, setUserCity] = useState<string>("...");
+
+  const isHomePage = pathname === "/";
 
   useEffect(() => {
     // Fetch user location based on IP
@@ -65,6 +69,8 @@ export function Navbar() {
   const toggleLanguage = () => {
     setLanguage(language === "ar" ? "en" : "ar");
   };
+
+  if (!isHomePage) return null;
 
   return (
     <header

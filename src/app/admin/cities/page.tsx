@@ -28,6 +28,28 @@ import {
     SheetTitle,
 } from "@/components/ui/sheet";
 
+interface Category {
+    id: string;
+    label: string;
+    color: string;
+    defaultPrice: number;
+}
+
+interface City {
+    _id: string;
+    name: {
+        ar: string;
+        en: string;
+    };
+    country: {
+        ar: string;
+        en: string;
+    };
+    image: string;
+    slug: string;
+    flag: string;
+}
+
 interface Venue {
     _id: string;
     name: {
@@ -42,7 +64,8 @@ interface Venue {
         };
     };
     image: string;
-    categories?: any[];
+    categories?: Category[];
+    locationLink?: string;
 }
 
 function CitiesManagementContent() {
@@ -53,10 +76,10 @@ function CitiesManagementContent() {
     const [searchTerm, setSearchTerm] = useState("");
     const [isAddOpen, setIsAddOpen] = useState(searchParams.get("add") === "true");
     const [viewType, setViewType] = useState<"venues" | "cities">("venues");
-    const [editingItem, setEditingItem] = useState<any | null>(null);
+    const [editingItem, setEditingItem] = useState<City | Venue | null>(null);
 
     // Data for dropdowns
-    const [cities, setCities] = useState<any[]>([]);
+    const [cities, setCities] = useState<City[]>([]);
 
     // Form state
     const [addType, setAddType] = useState<"city" | "venue">("venue");
@@ -139,21 +162,23 @@ function CitiesManagementContent() {
         }
     };
 
-    const handleEdit = (item: any, type: "city" | "venue") => {
+    const handleEdit = (item: City | Venue, type: "city" | "venue") => {
         setEditingItem(item);
         setAddType(type);
         if (type === "venue") {
-            setVenueName(item.name.en);
-            setVenueNameAr(item.name.ar);
-            setSelectedCityId(item.cityId?._id || item.cityId);
-            setLocationLink(item.locationLink || "");
+            const venue = item as Venue;
+            setVenueName(venue.name.en);
+            setVenueNameAr(venue.name.ar);
+            setSelectedCityId(venue.cityId?._id);
+            setLocationLink(venue.locationLink || "");
         } else {
-            setCityName(item.name.en);
-            setCityNameAr(item.name.ar);
-            setCountryName(item.country.en);
-            setCountryNameAr(item.country.ar);
-            setCitySlug(item.slug);
-            setCityFlag(item.flag);
+            const city = item as City;
+            setCityName(city.name.en);
+            setCityNameAr(city.name.ar);
+            setCountryName(city.country.en);
+            setCountryNameAr(city.country.ar);
+            setCitySlug(city.slug);
+            setCityFlag(city.flag);
         }
         setImageUrl(item.image);
         setIsAddOpen(true);
@@ -238,7 +263,7 @@ function CitiesManagementContent() {
                     flag: cityFlag
                 };
                 
-                const url = editingItem ? `/api/cities/${editingItem.slug}` : '/api/cities';
+                const url = (editingItem && 'slug' in editingItem) ? `/api/cities/${editingItem.slug}` : '/api/cities';
                 const method = editingItem ? 'PUT' : 'POST';
 
                 const res = await fetch(url, {
@@ -592,8 +617,7 @@ function CitiesManagementContent() {
                             </div>
                             <div className="p-4 flex items-center justify-between">
                                 <div className="flex -space-x-2">
-                                    {/* @ts-ignore */}
-                                    {venue.categories?.slice(0, 3).map((cat: any) => (
+                                    {venue.categories?.slice(0, 3).map((cat: Category) => (
                                         <div 
                                             key={cat.id} 
                                             className="w-8 h-8 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-[10px] font-bold text-white"

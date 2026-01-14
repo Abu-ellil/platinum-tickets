@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { PlatinumStageMap } from "@/components/platinum-stage-map";
-import { MANAMA_AMPHITHEATER, MANAMA_CATEGORIES } from "@/lib/manama-amphitheater-data";
+import { PLATINUM_STAGE, STAGE_CATEGORIES } from "@/lib/platinum-stage-data";
 import { Seat } from "@/lib/types";
 
 export default function ManamaStagePage() {
@@ -32,8 +32,8 @@ export default function ManamaStagePage() {
             {/* Stage Map Container */}
             <div className="max-w-5xl mx-auto px-4 pb-8">
                 <PlatinumStageMap
-                    theater={MANAMA_AMPHITHEATER}
-                    categories={MANAMA_CATEGORIES}
+                    theater={PLATINUM_STAGE}
+                    categories={STAGE_CATEGORIES}
                     selectedSeats={selectedSeats}
                     onSeatSelect={handleSeatSelect}
                 />

@@ -19,13 +19,40 @@ import {
   Heart,
   ExternalLink,
   ChevronLeftCircle,
-  ChevronRightCircle
+  ChevronRightCircle,
+  LucideIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/lib/language-context";
+import { Event, Artist } from "@/lib/types";
 
-const CATEGORY_ICONS: Record<string, any> = {
+interface City {
+  _id: string;
+  name: {
+    ar: string;
+    en: string;
+  };
+  image: string;
+  slug: string;
+  country: {
+    ar: string;
+    en: string;
+  };
+  flag: string;
+}
+
+interface Category {
+  _id: string;
+  slug: string;
+  label: {
+    ar: string;
+    en: string;
+  };
+  image: string;
+}
+
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
   music: Music,
   comedy: Theater,
   cinema: Theater,
@@ -48,10 +75,10 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
   const { language, dir, t } = useLanguage();
   const citySlug = (id as string).toLowerCase();
 
-  const [city, setCity] = useState<any>(null);
-  const [events, setEvents] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [artists, setArtists] = useState<any[]>([]);
+  const [city, setCity] = useState<City | null>(null);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
 
   const isRtl = dir === "rtl";
@@ -201,7 +228,7 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
             </div>
 
             <div className="flex gap-6 overflow-x-auto no-scrollbar scroll-smooth pb-6 snap-x px-4 -mx-4">
-              {events.length > 0 ? events.map((event: any) => (
+              {events.length > 0 ? events.map((event: Event) => (
                 <Link href={`/events/${event._id}`} key={event._id} className="min-w-[280px] md:min-w-[340px] snap-start mb-2 group cursor-pointer transition-all">
                   <div className="relative aspect-[16/10] rounded-2xl overflow-hidden mb-4 shadow-sm group-hover:shadow-xl transition-all duration-500">
                     <Image src={event.image} alt={event.title} fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
@@ -221,15 +248,6 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
                     <button className="absolute top-4 right-4 bg-white/20 backdrop-blur-md p-2 rounded-full hover:bg-white/40 transition-colors border border-white/10 group/heart">
                       <Heart className="w-5 h-5 text-white group-hover/heart:fill-red-500 group-hover/heart:text-red-500 transition-all" />
                     </button>
-
-                    <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
-                      <div className="bg-black/40 backdrop-blur-xl p-3 rounded-xl border border-white/20 flex items-center gap-3 w-full justify-between">
-                        <span className="text-white font-black">{event.pricing?.[0]?.price || '350'} {event.currency}</span>
-                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700 rounded-lg h-9 px-4 font-bold transition-all hover:scale-105">
-                          {t("book_now")}
-                        </Button>
-                      </div>
-                    </div>
                   </div>
 
                   <div className="px-1">
@@ -246,7 +264,11 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
                     <h3 className="font-black text-gray-900 text-lg md:text-xl line-clamp-2 leading-tight group-hover:text-blue-600 transition-colors">{event.title}</h3>
                     <div className="flex items-center gap-1.5 text-sm text-gray-400 mt-2.5 font-bold">
                       <MapPin className="w-4 h-4 text-gray-300" />
-                      <span className="truncate">{event.venueId?.name?.[language] || city.name[language]}</span>
+                      <span className="truncate">
+                        {(event.venueId && typeof event.venueId === 'object' && 'name' in event.venueId) 
+                          ? event.venueId.name[language as keyof typeof event.venueId.name] 
+                          : city.name[language as keyof typeof city.name]}
+                      </span>
                     </div>
                   </div>
                 </Link>
@@ -268,7 +290,7 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
                 </h2>
               </div>
               <div className="px-6 space-y-4">
-                {featuredEvents.map((event: any) => (
+                {featuredEvents.map((event: Event) => (
                   <Link href={`/events/${event._id}`} key={event._id} className="flex gap-4 group cursor-pointer">
                     <div className="relative w-24 h-24 rounded-2xl overflow-hidden shrink-0 shadow-sm group-hover:shadow-md transition-all">
                       <Image src={event.image} alt={event.title} fill className="object-cover group-hover:scale-110 transition-transform" sizes="96px" />
@@ -278,7 +300,9 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
                       <p className="text-xs text-gray-400 mb-2">{event.showTimes?.[0]?.date ? new Date(event.showTimes[0].date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' }) : ''}</p>
                       <p className="text-xs text-gray-500 flex items-center gap-1">
                         <MapPin className="w-3 h-3" />
-                        {event.venueId?.name?.[language] || city.name[language]}
+                        {(event.venueId && typeof event.venueId === 'object' && 'name' in event.venueId) 
+                          ? event.venueId.name[language as keyof typeof event.venueId.name] 
+                          : city.name[language as keyof typeof city.name]}
                       </p>
                     </div>
                     <div className="mr-auto self-center">
@@ -299,7 +323,7 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
               </div>
               <div className="flex gap-10 overflow-x-auto no-scrollbar justify-center pb-4">
                 {categories.map((cat, i) => {
-                  const Icon = CATEGORY_ICONS[cat.slug] || Star;
+                  const Icon = (CATEGORY_ICONS[cat.slug] || Star) as LucideIcon;
                   return (
                     <div key={cat._id} className="flex flex-col items-center gap-4 min-w-[100px] group cursor-pointer">
                       <div className="w-24 h-24 rounded-full overflow-hidden relative border-4 border-white shadow-xl group-hover:scale-110 group-hover:-translate-y-2 transition-all duration-500 ease-out ring-1 ring-gray-100">
@@ -345,24 +369,7 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
           </div>
 
           {/* Footer App Banner */}
-          <section className="m-6 bg-gray-100 rounded-[32px] p-8 text-center">
-            <h3 className="text-2xl font-black text-gray-900 mb-2 leading-snug">
-              {language === 'ar' ? 'تجربة أفضل في التطبيق' : 'Better Experience in App'}
-            </h3>
-            <p className="text-gray-500 text-sm mb-6">
-              {language === 'ar' ? 'حمل التطبيق لتحصل على ميزات حصرية' : 'Download the app for exclusive features'}
-            </p>
-            <div className="flex flex-col items-center gap-4">
-              <div className="flex gap-4">
-                <Image src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg" alt="App Store" width={120} height={40} unoptimized />
-                <Image src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Google Play" width={135} height={40} unoptimized />
-              </div>
-              <div className="bg-black text-white px-8 py-3 rounded-2xl font-bold flex items-center gap-2">
-                <ExternalLink className="w-4 h-4" />
-                {language === 'ar' ? 'فتح التطبيق' : 'Open App'}
-              </div>
-            </div>
-          </section>
+         
 
         </main>
       </div>
