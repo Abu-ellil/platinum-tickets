@@ -3047,8 +3047,35 @@ export default function TheaterLayout({
   };
 
   // State for zoom and pan
-  const [scale, setScale] = useState(0.8);
-  const [pan, setPan] = useState({ x: 50, y: 50 });
+  const [scale, setScale] = useState(0.4);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.clientWidth;
+        const containerHeight = containerRef.current.clientHeight;
+        
+        // Target center of the theater content
+        const contentCenterX = 754.5;
+        const contentCenterY = 400; // Middle of the main sections area
+        
+        // Calculate scale to fit width on small screens
+        let initialScale = 0.45;
+        if (containerWidth < 768) {
+          initialScale = (containerWidth / 1000) * 0.85; // Fit with some margin
+        }
+        
+        setScale(initialScale);
+        setPan({
+          x: (containerWidth / 2) - (contentCenterX * initialScale),
+          y: 60 // Keep some space from the header
+        });
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(null);
@@ -3061,7 +3088,7 @@ export default function TheaterLayout({
   const MAX_SCALE = 3;
 
   // Level of Detail threshold
-  const DETAIL_THRESHOLD = 1.2;
+  const DETAIL_THRESHOLD = 0.6;
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
