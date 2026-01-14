@@ -82,6 +82,10 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
 
   const eventTime = event.showTimes?.[0]?.time || '';
 
+  const minPrice = event.pricing && event.pricing.length > 0
+    ? Math.min(...event.pricing.map((p: any) => p.price))
+    : 0;
+
   return (
     <div className="min-h-screen bg-gray-50 pb-10" dir={dir}>
       {/* Hero Image */}
@@ -166,7 +170,7 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
               <div className="text-center mb-8">
                 <p className="text-gray-400 text-sm font-bold uppercase mb-2">{language === 'ar' ? 'سعر التذكرة يبدأ من' : 'Tickets start from'}</p>
                 <div className="text-4xl font-black text-gray-900 flex items-center justify-center gap-1">
-                  {event.pricing?.[0]?.price} <span className="text-lg font-bold text-gray-400">{event.currency}</span>
+                  {minPrice.toLocaleString()} <span className="text-lg font-bold text-gray-400">{event.currency}</span>
                 </div>
               </div>
 
@@ -183,6 +187,21 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Mobile Sticky Footer */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-100 p-4 pb-8 shadow-[0_-10px_30px_rgba(0,0,0,0.1)] flex items-center justify-between gap-4">
+        <div>
+          <p className="text-gray-400 text-[10px] font-bold uppercase">{language === 'ar' ? 'تبدأ من' : 'Starts from'}</p>
+          <div className="text-xl font-black text-gray-900 flex items-center gap-1">
+            {minPrice.toLocaleString()} <span className="text-xs font-bold text-gray-400">{event.currency}</span>
+          </div>
+        </div>
+        <Button size="lg" className="flex-1 h-12 text-sm font-bold bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-200" asChild>
+          <Link href={`/booking/${event._id}`}>
+            {language === 'ar' ? 'احجز الآن' : 'Book Now'}
+          </Link>
+        </Button>
       </div>
     </div>
   );

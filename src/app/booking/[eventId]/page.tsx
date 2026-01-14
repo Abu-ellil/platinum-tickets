@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, use } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ChevronRight, ArrowLeft } from "lucide-react";
+import { ChevronRight, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlatinumStageMap } from "@/components/platinum-stage-map";
 import { getTheaterConfig } from "@/lib/theater-data";
-import { EVENTS } from "@/lib/data";
 import { Seat, Theater } from "@/lib/types";
+import { useLanguage } from "@/lib/language-context";
 
 // Helper to find seat price/details by ID
 const findSeatInTheater = (theater: Theater, seatId: string) => {
@@ -21,12 +20,35 @@ const findSeatInTheater = (theater: Theater, seatId: string) => {
   return null;
 };
 
-export default function BookingPage({ params }: { params: { eventId: string } }) {
-  const router = useRouter();
+export default function BookingPage({ params }: { params: Promise<{ eventId: string }> }) {
+  const { eventId } = use(params);
+  const { language, dir } = useLanguage();
   const [selectedSeatIds, setSelectedSeatIds] = useState<string[]>([]);
+  const [event, setEvent] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const event = EVENTS.find(e => e.id === params.eventId) || EVENTS[0];
-  const { theater, categories } = useMemo(() => getTheaterConfig(params.eventId), [params.eventId]);
+  useEffect(() => {
+    const fetchEvent = async () => {
+      try {
+        const res = await fetch(`/api/events/${eventId}`);
+        const data = await res.json();
+        if (data.success) {
+          setEvent(data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch event:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvent();
+  }, [eventId]);
+
+  const { theater, categories } = useMemo(() => {
+    if (!event) return getTheaterConfig(eventId);
+    return getTheaterConfig(eventId, event.pricing);
+  }, [eventId, event]);
 
   const toggleSeat = useCallback((seat: Seat) => {
     if (seat.status !== 'available') return;
@@ -47,19 +69,40 @@ export default function BookingPage({ params }: { params: { eventId: string } })
     }, 0);
   }, [selectedSeatIds, theater]);
 
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!event) {
+    return (
+      <div className="flex h-screen items-center justify-center flex-col gap-4">
+        <p className="text-gray-500">{language === 'ar' ? 'لم يتم العثور على الفعالية' : 'Event not found'}</p>
+        <Button asChild>
+          <Link href="/">{language === 'ar' ? 'العودة للرئيسية' : 'Back to Home'}</Link>
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
       {/* Header */}
       <header className="h-14 bg-white border-b flex items-center justify-between px-4 z-10 shrink-0">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" asChild>
-            <Link href={`/events/${params.eventId}`}>
-              <ChevronRight className="w-6 h-6" />
+            <Link href={`/events/${eventId}`}>
+              {language === 'ar' ? <ChevronRight className="w-6 h-6" /> : <ArrowLeft className="w-6 h-6" />}
             </Link>
           </Button>
           <div>
             <h1 className="font-bold text-sm md:text-base line-clamp-1">{event.title}</h1>
-            <p className="text-xs text-gray-500">{event.venue} • {event.date}</p>
+            <p className="text-xs text-gray-500">
+              {event.venueId?.name?.[language] || event.venueName} • {event.showTimes?.[0]?.date ? new Date(event.showTimes[0].date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US') : ''}
+            </p>
           </div>
         </div>
       </header>
@@ -81,9 +124,11 @@ export default function BookingPage({ params }: { params: { eventId: string } })
             <div className="space-y-4">
               <div className="flex justify-between items-end">
                 <div>
-                  <p className="text-gray-500 text-sm mb-1">المحدد: {selectedSeatIds.length} تذاكر</p>
+                  <p className="text-gray-500 text-sm mb-1">
+                    {language === 'ar' ? `المحدد: ${selectedSeatIds.length} تذاكر` : `Selected: ${selectedSeatIds.length} tickets`}
+                  </p>
                   <p className="text-2xl font-bold text-primary">
-                    {totalAmount} <span className="text-sm font-normal text-gray-400">SAR</span>
+                    {totalAmount.toLocaleString()} <span className="text-sm font-normal text-gray-400">{event.currency || 'SAR'}</span>
                   </p>
                 </div>
                 {/* Selected Seats Mini List */}
@@ -101,12 +146,12 @@ export default function BookingPage({ params }: { params: { eventId: string } })
               </div>
 
               <Button size="lg" className="w-full text-lg font-bold">
-                متابعة للدفع
+                {language === 'ar' ? 'متابعة للدفع' : 'Continue to Payment'}
               </Button>
             </div>
           ) : (
             <div className="text-center text-gray-400 py-2">
-              الرجاء تحديد المقاعد للمتابعة
+              {language === 'ar' ? 'الرجاء تحديد المقاعد للمتابعة' : 'Please select seats to continue'}
             </div>
           )}
         </div>

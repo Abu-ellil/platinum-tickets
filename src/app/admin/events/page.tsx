@@ -57,17 +57,16 @@ interface CategoryPrice {
 interface IEvent {
     _id: string;
     title: string;
-    date: string;
     venueId?: { _id: string; name: any };
     venueName?: string;
     description?: string;
     cityId: { _id: string; name: any };
     image: string;
-    pricing: { price: number }[];
+    pricing: { categoryId: string; price: number }[];
     currency: string;
     status: string;
     type: string;
-    showTimes: { date: string }[];
+    showTimes: { date: string; time: string }[];
 }
 
 export default function EventsManagement() {
@@ -91,8 +90,8 @@ export default function EventsManagement() {
     const [eventTitle, setEventTitle] = useState("");
     const [showTimes, setShowTimes] = useState<ShowTime[]>([{ id: "1", date: "", time: "" }]);
     const [categoryPrices, setCategoryPrices] = useState<CategoryPrice[]>([]);
+    const [editingEvent, setEditingEvent] = useState<IEvent | null>(null);
     const [imageUrl, setImageUrl] = useState("");
-    const [imageFile, setImageFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [currency, setCurrency] = useState("EGP");
     const [isSaving, setIsSaving] = useState(false);
@@ -168,21 +167,61 @@ export default function EventsManagement() {
         }
     };
 
-    // When venue changes
-    const handleVenueChange = (venueId: string) => {
-        setSelectedVenue(venueId);
-        const venue = venues.find(v => v._id === venueId);
+    const handleEdit = async (event: IEvent) => {
+        setEditingEvent(event);
+        setEventTitle(event.title);
+        setSelectedCity(event.cityId._id);
         
-        if (venue && venue.categories) {
-            setCategoryPrices(venue.categories.map((cat: any) => ({
-                categoryId: cat.id,
-                label: cat.label,
-                price: cat.defaultPrice || 0,
-                color: cat.color || '#3b82f6'
+        // Fetch venues for this city first
+        try {
+            const res = await fetch(`/api/venues?cityId=${event.cityId._id}`);
+            const json = await res.json();
+            if (json.success) {
+                setVenues(json.data);
+                
+                // After venues are loaded, set the selected venue
+                const vId = event.venueId?._id;
+                if (vId) {
+                    setSelectedVenue(vId);
+                    setVenueInput(event.venueId?.name?.[language] || event.venueId?.name?.en || "");
+                    
+                    const venue = json.data.find((v: any) => v._id === vId);
+                    if (venue && venue.categories) {
+                        setCategoryPrices(venue.categories.map((cat: any) => {
+                            const eventPrice = event.pricing?.find((p: any) => p.categoryId === cat.id);
+                            return {
+                                categoryId: cat.id,
+                                label: cat.label,
+                                price: eventPrice ? eventPrice.price : (cat.defaultPrice || 0),
+                                color: cat.color || '#3b82f6'
+                            };
+                        }));
+                    }
+                } else {
+                    setVenueInput(event.venueName || "");
+                    setCategoryPrices([]);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to fetch venues during edit:", error);
+        }
+
+        setEventDescription(event.description || "");
+        setEventType(event.type);
+        setCurrency(event.currency || "EGP");
+        setImageUrl(event.image);
+        
+        if (event.showTimes && event.showTimes.length > 0) {
+            setShowTimes(event.showTimes.map((st: any, idx: number) => ({
+                id: idx.toString(),
+                date: new Date(st.date).toISOString().split('T')[0],
+                time: st.time || new Date(st.date).toTimeString().split(' ')[0].substring(0, 5)
             })));
         } else {
-            setCategoryPrices([]);
+            setShowTimes([{ id: "1", date: "", time: "" }]);
         }
+        
+        setIsAddOpen(true);
     };
 
     // Add show time
@@ -214,7 +253,6 @@ export default function EventsManagement() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        setImageFile(file);
         // Create local preview URL
         const previewUrl = URL.createObjectURL(file);
         setImageUrl(previewUrl);
@@ -237,6 +275,7 @@ export default function EventsManagement() {
 
     // Reset form
     const resetForm = () => {
+        setEditingEvent(null);
         setSelectedCity("");
         setSelectedVenue("");
         setVenueInput("");
@@ -247,7 +286,6 @@ export default function EventsManagement() {
         setShowTimes([{ id: "1", date: "", time: "" }]);
         setCategoryPrices([]);
         setImageUrl("");
-        setImageFile(null);
         setCurrency("EGP");
     };
 
@@ -292,15 +330,22 @@ export default function EventsManagement() {
                 featured: false,
             };
 
-            const res = await fetch('/api/events', {
-                method: 'POST',
+            const url = editingEvent ? `/api/events/${editingEvent._id}` : '/api/events';
+            const method = editingEvent ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method: method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
             const data = await res.json();
             if (data.success) {
-                setEvents([data.data, ...events]);
+                if (editingEvent) {
+                    setEvents(events.map(e => e._id === editingEvent._id ? data.data : e));
+                } else {
+                    setEvents([data.data, ...events]);
+                }
                 resetForm();
                 setIsAddOpen(false);
             } else {
@@ -321,12 +366,14 @@ export default function EventsManagement() {
             setEvents(events.filter(e => e._id !== id));
 
             try {
-                console.warn("DELETE not persisted to DB yet (endpoint missing)");
-                // Placeholder for delete API call
-                // await fetch(`/api/events/${id}`, { method: 'DELETE' });
+                const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (!data.success) {
+                    throw new Error(data.error);
+                }
             } catch (e) {
                 setEvents(oldEvents);
-                alert("Failed to delete");
+                alert("Failed to delete: " + (e instanceof Error ? e.message : "Unknown error"));
             }
         }
     };
@@ -529,7 +576,7 @@ export default function EventsManagement() {
                                             {language === 'ar' ? 'إضافة وقت' : 'Add Time'}
                                         </Button>
                                     </div>
-                                    {showTimes.map((st, index) => (
+                                    {showTimes.map((st) => (
                                         <div key={st.id} className="flex gap-2 items-center">
                                             <Input
                                                 type="date"
@@ -705,7 +752,12 @@ export default function EventsManagement() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-1">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-blue-50 hover:text-blue-600">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-8 w-8 rounded-full hover:bg-blue-50 hover:text-blue-600"
+                                                    onClick={() => handleEdit(event)}
+                                                >
                                                     <Edit2 className="h-4 w-4" />
                                                 </Button>
                                                 <Button
@@ -749,7 +801,10 @@ export default function EventsManagement() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" className="rounded-2xl border-gray-100 p-2 min-w-[160px]">
-                                                    <DropdownMenuItem className="gap-3 py-3 rounded-xl focus:bg-gray-50 cursor-pointer text-sm font-medium">
+                                                    <DropdownMenuItem 
+                                                        className="gap-3 py-3 rounded-xl focus:bg-gray-50 cursor-pointer text-sm font-medium"
+                                                        onClick={() => handleEdit(event)}
+                                                    >
                                                         <Edit2 className="h-4 w-4 text-gray-400" />
                                                         {language === 'ar' ? 'تعديل' : 'Edit'}
                                                     </DropdownMenuItem>
