@@ -18,14 +18,8 @@ export interface ICity extends Document {
 
 const CitySchema = new Schema<ICity>(
   {
-    name: {
-      ar: { type: String, required: true },
-      en: { type: String, required: true },
-    },
-    country: {
-      ar: { type: String, required: true },
-      en: { type: String, required: true },
-    },
+    name: { type: String, required: true },
+    country: { type: String, required: true },
     image: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
     flag: { type: String, required: true },

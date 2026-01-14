@@ -8,10 +8,7 @@ interface ICategory {
 }
 
 export interface IVenue extends Document {
-  name: {
-    ar: string;
-    en: string;
-  };
+  name: string;
   cityId: Types.ObjectId;
   theaterId: string; // Reference to theater layout (platinum-stage, manama-amphitheater)
   image: string;
@@ -22,10 +19,7 @@ export interface IVenue extends Document {
 
 const VenueSchema = new Schema<IVenue>(
   {
-    name: {
-      ar: { type: String, required: true },
-      en: { type: String, required: true },
-    },
+    name: { type: String, required: true },
     cityId: { type: Schema.Types.ObjectId, ref: 'City', required: true },
     theaterId: { type: String, required: true },
     image: { type: String, required: true },

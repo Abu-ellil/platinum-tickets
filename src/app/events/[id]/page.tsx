@@ -62,8 +62,13 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
     );
   }
 
-  const eventTitle = typeof event.title === 'string' ? event.title : event.title[language] || event.title.en;
-  const venueName = event.venueId?.name?.[language] || event.venueId?.name?.en || "Unknown Venue";
+  const eventTitle = event.title || "";
+  const venueName = event.venueId?.name?.[language] || 
+                    event.venueId?.name?.en || 
+                    event.venueName || 
+                    "Unknown Venue";
+
+  const eventDescription = event.description || "";
 
   // Format date
   const eventDate = event.showTimes?.[0]?.date
@@ -147,9 +152,9 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
                   {language === 'ar' ? 'تفاصيل الفعالية' : 'Event Details'}
                 </h3>
                 <p className="leading-relaxed">
-                  {language === 'ar'
+                  {eventDescription || (language === 'ar'
                     ? `استعد لتجربة لا تُنسى في ${venueName}. هذا الحدث يجمع بين الإثارة والترفيه ليقدم لك أمسية استثنائية. احجز تذاكرك الآن ولا تفوت الفرصة!`
-                    : `Get ready for an unforgettable experience at ${venueName}. This event brings together excitement and entertainment for an exceptional evening. Book your tickets now and don't miss out!`}
+                    : `Get ready for an unforgettable experience at ${venueName}. This event brings together excitement and entertainment for an exceptional evening. Book your tickets now and don't miss out!`)}
                 </p>
               </div>
             </div>

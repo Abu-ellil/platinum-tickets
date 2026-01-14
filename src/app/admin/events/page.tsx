@@ -12,10 +12,12 @@ import {
     Trash2,
     Calendar,
     MapPin,
+    Home,
     Eye,
     Upload,
     X,
     Clock,
+    Tag,
     DollarSign,
     Image as ImageIcon,
     Check,
@@ -54,10 +56,12 @@ interface CategoryPrice {
 
 interface IEvent {
     _id: string;
-    title: { ar: string; en: string };
+    title: string;
     date: string;
-    venueId: { _id: string; name: { ar: string; en: string } };
-    cityId: { _id: string; name: { ar: string; en: string } };
+    venueId?: { _id: string; name: any };
+    venueName?: string;
+    description?: string;
+    cityId: { _id: string; name: any };
     image: string;
     pricing: { price: number }[];
     currency: string;
@@ -72,18 +76,19 @@ export default function EventsManagement() {
     const [events, setEvents] = useState<IEvent[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
-    const [isAddOpen, setIsAddOpen] = useState(searchParams.get("add") === "true");
-
     // Data for dropdowns
     const [cities, setCities] = useState<any[]>([]);
-    const [apiVenues, setApiVenues] = useState<any[]>([]);
-    const [loadingVenues, setLoadingVenues] = useState(false);
+    const [venues, setVenues] = useState<any[]>([]);
+    const [categories, setCategories] = useState<any[]>([]);
+    const [isAddOpen, setIsAddOpen] = useState(searchParams.get("add") === "true");
 
     // Form state
     const [selectedCity, setSelectedCity] = useState("");
     const [selectedVenue, setSelectedVenue] = useState("");
+    const [venueInput, setVenueInput] = useState("");
+    const [eventDescription, setEventDescription] = useState("");
+    const [eventType, setEventType] = useState("concert");
     const [eventTitle, setEventTitle] = useState("");
-    const [eventTitleAr, setEventTitleAr] = useState("");
     const [showTimes, setShowTimes] = useState<ShowTime[]>([{ id: "1", date: "", time: "" }]);
     const [categoryPrices, setCategoryPrices] = useState<CategoryPrice[]>([]);
     const [imageUrl, setImageUrl] = useState("");
@@ -98,6 +103,7 @@ export default function EventsManagement() {
     useEffect(() => {
         fetchEvents();
         fetchCities();
+        fetchCategories();
     }, []);
 
     const fetchEvents = async () => {
@@ -127,48 +133,54 @@ export default function EventsManagement() {
         }
     };
 
-    // When city changes, fetch venues for that city
-    const handleCityChange = async (cityId: string) => {
-        setSelectedCity(cityId);
-        setSelectedVenue("");
-        setCategoryPrices([]);
-        setApiVenues([]);
-
-        if (!cityId) return;
-
+    const fetchCategories = async () => {
         try {
-            setLoadingVenues(true);
-            const res = await fetch(`/api/venues?cityId=${cityId}`);
+            const res = await fetch('/api/categories');
             const json = await res.json();
             if (json.success) {
-                setApiVenues(json.data);
+                setCategories(json.data);
             }
         } catch (error) {
-            console.error("Failed to fetch venues:", error);
-        } finally {
-            setLoadingVenues(false);
+            console.error("Failed to fetch categories:", error);
         }
     };
 
-    // When venue changes, try to load category config
+    // When city changes
+    const handleCityChange = async (cityId: string) => {
+        setSelectedCity(cityId);
+        setSelectedVenue("");
+        setVenueInput("");
+        setEventDescription("");
+        setVenues([]);
+        setCategoryPrices([]);
+
+        if (!cityId) return;
+
+        // Fetch venues for this city
+        try {
+            const res = await fetch(`/api/venues?cityId=${cityId}`);
+            const json = await res.json();
+            if (json.success) {
+                setVenues(json.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch venues:", error);
+        }
+    };
+
+    // When venue changes
     const handleVenueChange = (venueId: string) => {
         setSelectedVenue(venueId);
-
-        // Find the selected venue object from API list
-        const selectedApiVenue = apiVenues.find(v => v._id === venueId);
-
-        if (selectedApiVenue && selectedApiVenue.categories && selectedApiVenue.categories.length > 0) {
-            // Use categories from DB venue
-            const prices: CategoryPrice[] = selectedApiVenue.categories.map((cat: any) => ({
+        const venue = venues.find(v => v._id === venueId);
+        
+        if (venue && venue.categories) {
+            setCategoryPrices(venue.categories.map((cat: any) => ({
                 categoryId: cat.id,
                 label: cat.label,
-                price: cat.defaultPrice,
-                color: cat.color,
-            }));
-            setCategoryPrices(prices);
+                price: cat.defaultPrice || 0,
+                color: cat.color || '#3b82f6'
+            })));
         } else {
-            // Fallback if no categories found
-            console.warn("No categories found for venue:", selectedApiVenue?.name?.en || venueId);
             setCategoryPrices([]);
         }
     };
@@ -227,20 +239,27 @@ export default function EventsManagement() {
     const resetForm = () => {
         setSelectedCity("");
         setSelectedVenue("");
+        setVenueInput("");
+        setEventDescription("");
+        setVenues([]);
+        setEventType("concert");
         setEventTitle("");
-        setEventTitleAr("");
         setShowTimes([{ id: "1", date: "", time: "" }]);
         setCategoryPrices([]);
         setImageUrl("");
         setImageFile(null);
         setCurrency("EGP");
-        setApiVenues([]);
     };
 
     // Save event
     const handleSaveEvent = async () => {
         if (!imageUrl) {
             alert(language === 'ar' ? "يرجى رفع صورة للفعالية" : "Please upload an event image");
+            return;
+        }
+
+        if (!venueInput && !selectedVenue) {
+            alert(language === 'ar' ? "يرجى ادخال مكان الفعالية" : "Please enter an event venue");
             return;
         }
 
@@ -253,24 +272,23 @@ export default function EventsManagement() {
         try {
             // Construct payload 
             const payload = {
-                title: {
-                    ar: eventTitleAr || eventTitle,
-                    en: eventTitle || eventTitleAr
-                },
-                venueId: selectedVenue, // Now a valid ObjectId from API
-                cityId: selectedCity,   // Now a valid ObjectId from API
+                title: eventTitle,
+                cityId: selectedCity,
+                venueId: selectedVenue || undefined,
+                venueName: !selectedVenue ? venueInput : undefined,
+                description: eventDescription,
                 showTimes: showTimes.map(st => ({
                     date: new Date(`${st.date}T${st.time}`),
                     time: st.time
                 })),
-                pricing: categoryPrices.map(cp => ({
+                pricing: categoryPrices.filter(cp => cp.price > 0).map(cp => ({
                     categoryId: cp.categoryId,
                     price: cp.price
                 })),
                 image: imageUrl || "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=800",
                 currency: currency,
                 status: 'active',
-                type: 'concert',
+                type: eventType,
                 featured: false,
             };
 
@@ -313,10 +331,14 @@ export default function EventsManagement() {
         }
     };
 
-    const filteredEvents = events.filter(event =>
-        (event.title?.[language] || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (event.venueId?.name?.[language] || "").toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredEvents = events.filter(event => {
+        const titleMatch = (event.title || "").toLowerCase().includes(searchTerm.toLowerCase());
+        const venueNameStr = event.venueId?.name?.[language] || event.venueName || "";
+        const cityNameStr = event.cityId?.name?.[language] || "";
+        const locationMatch = venueNameStr.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                             cityNameStr.toLowerCase().includes(searchTerm.toLowerCase());
+        return titleMatch || locationMatch;
+    });
 
     return (
         <div className="space-y-6 md:space-y-8">
@@ -392,71 +414,99 @@ export default function EventsManagement() {
                                 </div>
 
                                 {/* City Selection */}
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <MapPin className="h-4 w-4" />
-                                        {language === 'ar' ? 'المدينة' : 'City'}
-                                    </label>
-                                    <select
-                                        value={selectedCity}
-                                        onChange={(e) => handleCityChange(e.target.value)}
-                                        className="flex h-12 w-full items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 border-none"
-                                    >
-                                        <option value="">{language === 'ar' ? 'اختر المدينة...' : 'Select city...'}</option>
-                                        {cities.map(city => (
-                                            <option key={city._id} value={city._id}>
-                                                {language === 'ar' ? (city.name?.ar || '---') : (city.name?.en || '---')}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Venue Selection */}
-                                {selectedCity && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
                                             <MapPin className="h-4 w-4" />
-                                            {language === 'ar' ? 'المسرح / القاعة' : 'Venue / Theater'}
+                                            {language === 'ar' ? 'المدينة' : 'City'}
                                         </label>
                                         <select
-                                            value={selectedVenue}
-                                            onChange={(e) => handleVenueChange(e.target.value)}
-                                            disabled={loadingVenues}
-                                            className="flex h-12 w-full items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 border-none disabled:opacity-50"
+                                            value={selectedCity}
+                                            onChange={(e) => handleCityChange(e.target.value)}
+                                            className="flex h-12 w-full items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 border-none"
                                         >
-                                            <option value="">
-                                                {loadingVenues
-                                                    ? (language === 'ar' ? 'جار التحميل...' : 'Loading...')
-                                                    : (language === 'ar' ? 'اختر المسرح...' : 'Select venue...')}
-                                            </option>
-                                            {apiVenues.map(venue => (
-                                                <option key={venue._id} value={venue._id}>
-                                                    {language === 'ar' ? (venue.name?.ar || '---') : (venue.name?.en || '---')}
+                                            <option value="">{language === 'ar' ? 'اختر المدينة...' : 'Select city...'}</option>
+                                            {cities.map(city => (
+                                                <option key={city._id} value={city._id}>
+                                                    {language === 'ar' ? (city.name?.ar || '---') : (city.name?.en || '---')}
                                                 </option>
                                             ))}
                                         </select>
                                     </div>
-                                )}
+
+                                    <div className="space-y-2 sm:col-span-2">
+                                        <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                            <Home className="h-4 w-4" />
+                                            {language === 'ar' ? 'المكان' : 'Venue'}
+                                        </label>
+                                        <input
+                                            list="venues-list"
+                                            value={venueInput}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setVenueInput(val);
+                                                const venue = venues.find(v => v.name.en === val || v.name.ar === val);
+                                                if (venue) {
+                                                    setSelectedVenue(venue._id);
+                                                    if (venue.categories) {
+                                                        setCategoryPrices(venue.categories.map((cat: any) => ({
+                                                            categoryId: cat.id,
+                                                            label: cat.label,
+                                                            price: cat.defaultPrice || 0,
+                                                            color: cat.color || '#3b82f6'
+                                                        })));
+                                                    }
+                                                } else {
+                                                    setSelectedVenue("");
+                                                }
+                                            }}
+                                            disabled={!selectedCity}
+                                            placeholder={language === 'ar' ? 'اكتب اسم المكان...' : 'Type venue name...'}
+                                            className="flex h-12 w-full items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 border-none disabled:opacity-50"
+                                        />
+                                        <datalist id="venues-list">
+                                            {venues.map(venue => (
+                                                <option key={venue._id} value={language === 'ar' ? venue.name.ar : venue.name.en} />
+                                            ))}
+                                        </datalist>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                            <Tag className="h-4 w-4" />
+                                            {language === 'ar' ? 'نوع الفعالية' : 'Event Type'}
+                                        </label>
+                                        <select
+                                            value={eventType}
+                                            onChange={(e) => setEventType(e.target.value)}
+                                            className="flex h-12 w-full items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 border-none"
+                                        >
+                                            {categories.map(cat => (
+                                                <option key={cat._id} value={cat.slug}>
+                                                    {language === 'ar' ? cat.label?.ar : cat.label?.en}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
 
                                 {/* Event Title */}
                                 <div className="grid grid-cols-1 gap-4">
                                     <div>
-                                        <label className="text-sm font-bold text-gray-700 block mb-1.5">{language === 'ar' ? 'اسم الفعالية (عربي)' : 'Event Title (Arabic)'}</label>
-                                        <Input
-                                            value={eventTitleAr}
-                                            onChange={(e) => setEventTitleAr(e.target.value)}
-                                            placeholder="حفلة تامر حسني"
-                                            className="h-12 bg-gray-50 border-none rounded-xl"
-                                            dir="rtl"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-sm font-bold text-gray-700 block mb-1.5">{language === 'ar' ? 'اسم الفعالية (إنجليزي)' : 'Event Title (English)'}</label>
+                                        <label className="text-sm font-bold text-gray-700 block mb-1.5">{language === 'ar' ? 'اسم الفعالية' : 'Event Title'}</label>
                                         <Input
                                             value={eventTitle}
                                             onChange={(e) => setEventTitle(e.target.value)}
-                                            placeholder="Tamer Hosny Concert"
+                                            placeholder={language === 'ar' ? 'اسم الفعالية...' : 'Event Title...'}
                                             className="h-12 bg-gray-50 border-none rounded-xl"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="text-sm font-bold text-gray-700 block mb-1.5">{language === 'ar' ? 'وصف الفعالية' : 'Event Description'}</label>
+                                        <textarea
+                                            value={eventDescription}
+                                            onChange={(e) => setEventDescription(e.target.value)}
+                                            placeholder={language === 'ar' ? 'وصف الفعالية هنا...' : 'Event description here...'}
+                                            className="w-full min-h-[120px] p-4 bg-gray-50 border-none rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                                         />
                                     </div>
                                 </div>
@@ -553,7 +603,7 @@ export default function EventsManagement() {
                                 <Button
                                     className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-100 gap-2"
                                     onClick={handleSaveEvent}
-                                    disabled={!selectedVenue || !eventTitleAr || isUploading || isSaving}
+                                    disabled={!selectedCity || !eventTitle || isUploading || isSaving}
                                 >
                                     {isUploading || isSaving ? (
                                         <>
@@ -619,7 +669,7 @@ export default function EventsManagement() {
                                             <div className="flex items-center gap-4">
                                                 <img src={event.image} alt="" className="h-10 w-16 object-cover rounded-xl shadow-sm" />
                                                 <div className="min-w-0">
-                                                    <p className="font-bold text-gray-900 truncate max-w-[200px]">{event.title?.[language] || '---'}</p>
+                                                    <p className="font-bold text-gray-900 truncate max-w-[200px]">{event.title || '---'}</p>
                                                     <p className="text-[10px] text-gray-400 uppercase font-black">{event.type}</p>
                                                 </div>
                                             </div>
@@ -637,7 +687,9 @@ export default function EventsManagement() {
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2 text-gray-600">
                                                 <MapPin className="h-4 w-4" />
-                                                <span className="text-sm truncate max-w-[150px]">{event.venueId?.name?.[language]}</span>
+                                                <span className="text-sm truncate max-w-[150px]">
+                                                    {event.venueId?.name?.[language] || event.venueName || '---'}
+                                                </span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 font-bold text-gray-900">
@@ -687,7 +739,7 @@ export default function EventsManagement() {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-start justify-between">
                                             <div>
-                                                <h3 className="font-bold text-gray-900 truncate leading-tight mb-1">{event.title?.[language] || '---'}</h3>
+                                                <h3 className="font-bold text-gray-900 truncate leading-tight mb-1">{event.title || '---'}</h3>
                                                 <p className="text-[10px] text-gray-400 uppercase font-black">{event.type}</p>
                                             </div>
                                             <DropdownMenu>
@@ -728,7 +780,9 @@ export default function EventsManagement() {
                                     </div>
                                     <div className="flex items-center gap-2 text-gray-500 bg-gray-50 p-2 rounded-xl">
                                         <MapPin className="h-3 w-3" />
-                                        <span className="truncate">{event.venueId?.name?.[language]}</span>
+                                        <span className="truncate">
+                                            {event.venueId?.name?.[language] || event.venueName || '---'}
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="flex items-center justify-between pt-2">

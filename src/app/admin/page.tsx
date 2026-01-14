@@ -208,7 +208,7 @@ export default function AdminDashboard() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="font-black text-gray-900 truncate text-base">
-                                        {event.title[language] || event.title.en || event.title.ar}
+                                        {event.title}
                                     </p>
                                     <p className="text-xs text-gray-400 font-bold truncate uppercase mt-1 flex items-center gap-1">
                                         <MapPin className="h-3 w-3" />

@@ -1,10 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface ICategory extends Document {
-  label: {
-    ar: string;
-    en: string;
-  };
+  label: string;
   image: string;
   slug: string;
   createdAt: Date;
@@ -13,10 +10,7 @@ export interface ICategory extends Document {
 
 const CategorySchema = new Schema<ICategory>(
   {
-    label: {
-      ar: { type: String, required: true },
-      en: { type: String, required: true },
-    },
+    label: { type: String, required: true },
     image: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
   },

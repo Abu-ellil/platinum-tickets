@@ -22,12 +22,10 @@ interface City {
 
 interface Event {
   _id: string;
-  title: {
-    ar: string;
-    en: string;
-  };
+  title: string;
   image: string;
   venueId?: Venue;
+  venueName?: string;
   cityId?: City;
   pricing: {
     categoryId: string;
@@ -36,10 +34,7 @@ interface Event {
   currency: string;
   rating?: number;
   originalPrice?: number;
-  statusBadge?: {
-    ar: string;
-    en: string;
-  };
+  statusBadge?: string;
   status: string;
   type: string;
   showTimes: {
@@ -55,12 +50,14 @@ interface EventCardProps {
 export function EventCard({ event }: EventCardProps) {
   const { language } = useLanguage();
   
-  const title = language === 'ar' ? event.title?.ar : event.title?.en || event.title?.ar || '';
-  const venueName = event.venueId?.name ? (language === 'ar' ? event.venueId.name.ar : event.venueId.name.en) : '';
+  const title = event.title || '';
+  const venueName = event.venueId?.name
+    ? (language === 'ar' ? event.venueId.name.ar : event.venueId.name.en) 
+    : event.venueName || '';
   const cityName = event.cityId?.name ? (language === 'ar' ? event.cityId.name.ar : event.cityId.name.en) : '';
   const price = event.pricing && event.pricing.length > 0 ? Math.min(...event.pricing.map(p => p.price)) : 0;
   const rating = event.rating || 4.8;
-  const badgeText = event.statusBadge ? (language === 'ar' ? event.statusBadge.ar : event.statusBadge.en) : null;
+  const badgeText = event.statusBadge || null;
   const showDate = event.showTimes && event.showTimes.length > 0 ? new Date(event.showTimes[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
 
   return (

@@ -204,7 +204,7 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
               {events.length > 0 ? events.map((event: any) => (
                 <Link href={`/events/${event._id}`} key={event._id} className="min-w-[280px] md:min-w-[340px] snap-start mb-2 group cursor-pointer transition-all">
                   <div className="relative aspect-[16/10] rounded-2xl overflow-hidden mb-4 shadow-sm group-hover:shadow-xl transition-all duration-500">
-                    <Image src={event.image} alt={event.title[language]} fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
+                    <Image src={event.image} alt={event.title} fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
 
                     {/* Overlays */}
                     <div className="absolute top-4 left-4 flex flex-col gap-2">
@@ -243,7 +243,7 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
                         <span>{event.rating || '4.8'}</span>
                       </div>
                     </div>
-                    <h3 className="font-black text-gray-900 text-lg md:text-xl line-clamp-2 leading-tight group-hover:text-blue-600 transition-colors">{event.title[language]}</h3>
+                    <h3 className="font-black text-gray-900 text-lg md:text-xl line-clamp-2 leading-tight group-hover:text-blue-600 transition-colors">{event.title}</h3>
                     <div className="flex items-center gap-1.5 text-sm text-gray-400 mt-2.5 font-bold">
                       <MapPin className="w-4 h-4 text-gray-300" />
                       <span className="truncate">{event.venueId?.name?.[language] || city.name[language]}</span>
@@ -271,10 +271,10 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
                 {featuredEvents.map((event: any) => (
                   <Link href={`/events/${event._id}`} key={event._id} className="flex gap-4 group cursor-pointer">
                     <div className="relative w-24 h-24 rounded-2xl overflow-hidden shrink-0 shadow-sm group-hover:shadow-md transition-all">
-                      <Image src={event.image} alt={event.title[language]} fill className="object-cover group-hover:scale-110 transition-transform" sizes="96px" />
+                      <Image src={event.image} alt={event.title} fill className="object-cover group-hover:scale-110 transition-transform" sizes="96px" />
                     </div>
                     <div className="flex flex-col justify-center py-1">
-                      <h4 className="font-bold text-gray-900 text-sm md:text-base mb-1 line-clamp-2">{event.title[language]}</h4>
+                      <h4 className="font-bold text-gray-900 text-sm md:text-base mb-1 line-clamp-2">{event.title}</h4>
                       <p className="text-xs text-gray-400 mb-2">{event.showTimes?.[0]?.date ? new Date(event.showTimes[0].date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' }) : ''}</p>
                       <p className="text-xs text-gray-500 flex items-center gap-1">
                         <MapPin className="w-3 h-3" />
