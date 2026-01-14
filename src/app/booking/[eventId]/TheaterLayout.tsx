@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { HelpCircle, Ticket, ChevronRight } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { HelpCircle, Ticket, ChevronRight, Globe } from 'lucide-react';
+import Link from 'next/link';
 import styles from './TheaterLayout.module.css';
 import overlayImageFile from './overlay.png';
 
@@ -3184,19 +3185,19 @@ export default function TheaterLayout({
 
   return (
       <div className={styles.container}>
-          {/* Header */}
+          {/* Event Header */}
             <div className={styles.header}>
                 <div className={styles.backButton} onClick={() => onBack ? onBack() : window.history.back()}>
                     <ChevronRight size={24} />
                 </div>
               <div className={styles.headerInfo}>
-                  <h1 className={styles.eventTitle}>{title}</h1>
-                  {subtitle && <p className={styles.eventSubtitle}>{subtitle}</p>}
-              </div>
-              <div className={styles.headerAction}>
-                  <HelpCircle size={20} />
-              </div>
-          </div>
+                   <h1 className={styles.eventTitle}>{title}</h1>
+                   {subtitle && <p className={styles.eventSubtitle}>{subtitle}</p>}
+               </div>
+               <div className={styles.headerAction}>
+                   {/* Empty action space to maintain centering */}
+               </div>
+           </div>
 
           {/* Canvas */}
           <div

@@ -1,11 +1,47 @@
 .container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: calc(100vh - 65px); /* Adjust height to account for global SiteHeader */
   background: white;
   font-family: 'Cairo', system-ui, sans-serif;
   overflow: hidden;
   direction: ltr;
+}
+
+.siteHeader {
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: white;
+  border-bottom: 1px solid #f1f5f9;
+  direction: ltr;
+}
+
+.languageSelector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.logoContainer {
+  display: flex;
+  align-items: center;
+}
+
+.logoContainer a {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logoImage {
+  height: 28px;
+  width: auto;
+  cursor: pointer;
 }
 
 .header {
