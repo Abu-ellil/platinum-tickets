@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronRight, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import TheaterLayout from "./TheaterLayout";
+import PaymentForm from "./PaymentForm";
 import { useLanguage } from "@/lib/language-context";
 
 export default function BookingPage({ params }: { params: Promise<{ eventId: string }> }) {
@@ -67,6 +68,7 @@ export default function BookingPage({ params }: { params: Promise<{ eventId: str
       <TheaterLayout
         title={event.title}
         subtitle={`${event.venueId?.name?.[language] || event.venueName} • ${event.showTimes?.[0]?.date ? new Date(event.showTimes[0].date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US') : ''}`}
+        currency={event.currency || 'SAR'}
         onContinue={(seats) => {
           setSelectedSeats(seats.map(s => ({
             sectionId: Number(s.sectionId),
@@ -82,76 +84,11 @@ export default function BookingPage({ params }: { params: Promise<{ eventId: str
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 overflow-hidden" dir={dir}>
-      {/* Header */}
-      <header className="h-14 bg-white border-b flex items-center justify-between px-4 z-10 shrink-0">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => setShowSummary(false)}>
-            {language === 'ar' ? <ChevronRight className="w-6 h-6" /> : <ArrowLeft className="w-6 h-6" />}
-          </Button>
-          <div>
-            <h1 className="font-bold text-sm md:text-base line-clamp-1">{event.title}</h1>
-            <p className="text-xs text-gray-500">
-              {language === 'ar' ? 'ملخص الحجز' : 'Booking Summary'}
-            </p>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content - Summary */}
-      <main className="flex-1 overflow-y-auto p-4">
-        <div className="container max-w-lg mx-auto space-y-6">
-          <div className="bg-white rounded-xl p-6 shadow-sm border space-y-4">
-            <h2 className="font-bold text-lg border-b pb-2">
-              {language === 'ar' ? 'المقاعد المختارة' : 'Selected Seats'}
-            </h2>
-            <div className="space-y-3">
-              {selectedSeats.map(seat => (
-                  <div key={`${seat.sectionId}-${seat.rowName}-${seat.seatNumber}`} className="flex justify-between items-center py-2 border-b last:border-0">
-                    <div>
-                      <p className="font-medium">
-                        {language === 'ar' ? 'مقعد' : 'Seat'} {seat.seatNumber} - {language === 'ar' ? 'صف' : 'Row'} {seat.rowName}
-                      </p>
-                      <p className="text-sm text-gray-500">{seat.sectionName}</p>
-                    </div>
-                    <p className="font-bold text-primary">
-                      {seat.price?.toLocaleString() || '0'} <span className="text-xs font-normal">{event.currency || 'SAR'}</span>
-                    </p>
-                  </div>
-                ))}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 shadow-sm border space-y-4">
-            <h2 className="font-bold text-lg border-b pb-2">
-              {language === 'ar' ? 'تفاصيل السداد' : 'Payment Details'}
-            </h2>
-            <div className="space-y-2">
-              <div className="flex justify-between text-gray-600">
-                <span>{language === 'ar' ? 'المجموع الفرعي' : 'Subtotal'}</span>
-                <span>{totalAmount.toLocaleString()} {event.currency || 'SAR'}</span>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>{language === 'ar' ? 'رسوم الخدمة' : 'Service Fee'}</span>
-                <span>0 {event.currency || 'SAR'}</span>
-              </div>
-              <div className="flex justify-between text-xl font-bold pt-4 border-t">
-                <span>{language === 'ar' ? 'الإجمالي' : 'Total'}</span>
-                <span className="text-primary">{totalAmount.toLocaleString()} {event.currency || 'SAR'}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/* Footer - Final Action */}
-      <div className="bg-white border-t p-4 pb-8 shrink-0 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] z-20">
-        <div className="container max-w-lg mx-auto">
-          <Button size="lg" className="w-full text-lg font-bold">
-            {language === 'ar' ? 'تأكيد الدفع' : 'Confirm Payment'}
-          </Button>
-        </div>
-      </div>
-    </div>
+    <PaymentForm
+      event={event}
+      selectedSeats={selectedSeats}
+      onBack={() => setShowSummary(false)}
+      totalAmount={totalAmount}
+    />
   );
 }

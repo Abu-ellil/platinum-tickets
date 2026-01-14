@@ -11,14 +11,15 @@ export function MainLayoutWrapper({
 }) {
     const pathname = usePathname();
     const isAdminRoute = pathname?.startsWith("/admin");
+    const isBookingRoute = pathname?.startsWith("/booking");
 
     return (
         <>
-            {!isAdminRoute && <Navbar />}
+            {!isAdminRoute && !isBookingRoute && <Navbar />}
             <main className="flex-1">
                 {children}
             </main>
-            {!isAdminRoute && <Footer />}
+            {!isAdminRoute && !isBookingRoute && <Footer />}
         </>
     );
 }

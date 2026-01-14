@@ -22,7 +22,7 @@
 .canvas {
   flex: 1;
   position: relative;
-  background: #f8f9fa;
+  background: white;
   overflow: hidden;
   touch-action: none;
 }
@@ -66,11 +66,190 @@
 }
 
 .footer {
+  background: transparent;
+  border-top: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  z-index: 20;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.priceContainer {
+  width: 100%;
+  overflow: hidden;
+  padding: 10px 0 20px 0;
+  pointer-events: auto;
+}
+
+.summaryBar {
+  width: 100%;
   background: white;
-  border-top: 1px solid #eee;
-  padding: 16px 20px;
+  padding: 16px 24px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  z-index: 20;
+  justify-content: space-between;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.08);
+  pointer-events: auto;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.nextButton {
+  background: #1a1a2e;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.nextButton:hover {
+  background: #2a2a4a;
+}
+
+.nextButton:active {
+  transform: scale(0.96);
+}
+
+.timerBadge {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.nextText {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.totalInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.detailsRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.seatCount {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #f59e0b;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.ticketIcon {
+  transform: rotate(-45deg);
+}
+
+.detailsLink {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #666;
+  cursor: pointer;
+}
+
+.detailsText {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.detailsIcon {
+  color: #999;
+}
+
+.totalRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  direction: ltr;
+}
+
+.totalAmount {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1a1a2e;
+}
+
+.currencyLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.totalLabel {
+  font-size: 16px;
+  font-weight: 600;
+  color: #666;
+  margin-left: 4px;
+}
+
+.priceScroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 10px;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.priceScroll::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.priceChip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: white;
+  padding: 12px 24px;
+  border-radius: 40px;
+  white-space: nowrap;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: grab;
+}
+
+.priceChip:hover {
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.08);
+}
+
+.priceChip:active {
+  cursor: grabbing;
+  transform: scale(0.95);
+}
+
+.priceText {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.priceDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
 }

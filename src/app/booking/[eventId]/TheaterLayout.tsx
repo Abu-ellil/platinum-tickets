@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { HelpCircle, Ticket } from 'lucide-react';
 import styles from './TheaterLayout.module.css';
 import overlayImageFile from './overlay.png';
 
@@ -38,6 +39,7 @@ interface TheaterLayoutProps {
   onSeatClick?: (sectionId: number, rowName: string, seatNumber: number) => void;
   title?: string;
   subtitle?: string;
+  currency?: string;
   onContinue?: (selectedSeats: {
     sectionId: number;
     rowName: string;
@@ -51,6 +53,7 @@ export default function TheaterLayout({
   onSeatClick,
   title = "Theater Layout",
   subtitle,
+  currency = "SAR",
   onContinue,
 }: TheaterLayoutProps) {
   // Embedded Data
@@ -3007,12 +3010,39 @@ export default function TheaterLayout({
 
   // State for selected seats
   const [selectedSeats, setSelectedSeats] = useState<{
-      sectionId: number;
-      rowName: string;
-      seatNumber: number;
-      price: number;
-      sectionName: string;
+    sectionId: number;
+    rowName: string;
+    seatNumber: number;
+    price: number;
+    sectionName: string;
   }[]>([]);
+
+  const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutes in seconds
+
+  React.useEffect(() => {
+    if (selectedSeats.length === 0) {
+      setTimeLeft(15 * 60);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 0) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [selectedSeats.length]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // State for zoom and pan
   const [scale, setScale] = useState(1);
@@ -3305,53 +3335,49 @@ export default function TheaterLayout({
 
           {/* Footer Info */}
           <div className={styles.footer}>
-              {selectedSeats.length > 0 ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                      <div style={{ textAlign: 'right', direction: 'rtl' }}>
-                          <div style={{ fontSize: '14px', color: '#666' }}>
-                              {selectedSeats.length} مقاعد مختارة
-                          </div>
-                          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1a1a2e' }}>
-                              {selectedSeats.reduce((sum, s) => sum + s.price, 0)} ر.س
-                          </div>
-                      </div>
-                      <button 
-                         onClick={() => onContinue?.(selectedSeats)}
-                        style={{
-                          padding: '12px 32px',
-                          background: '#1a1a2e',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '16px',
-                          fontWeight: 'bold'
-                      }}>
-                          إتمام الحجز
-                      </button>
-                  </div>
-              ) : (
-                  <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+              <div className={styles.priceContainer}>
+                  <div className={styles.priceScroll}>
                       {categories.map((cat: any, i: number) => (
                           <div
                               key={i}
-                              style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '8px',
-                                  background: '#f8f9fa',
-                                  padding: '8px 16px',
-                                  borderRadius: '20px',
-                                  whiteSpace: 'nowrap'
-                              }}
+                              className={styles.priceChip}
                           >
-                              <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: cat.color }} />
-                              <span style={{ fontSize: '12px', color: '#666' }}>{cat.price} ر.س</span>
+                              <span className={styles.priceText}>
+                                   {currency} {cat.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                               </span>
+                              <div 
+                                  className={styles.priceDot} 
+                                  style={{ backgroundColor: cat.color }} 
+                              />
                           </div>
                       ))}
+                  </div>
+              </div>
+
+              {selectedSeats.length > 0 && (
+                  <div className={styles.summaryBar}>
+                      <button className={styles.nextButton} onClick={() => onContinue?.(selectedSeats)}>
+                          <div className={styles.timerBadge}>{formatTime(timeLeft)}</div>
+                          <span className={styles.nextText}>التالي</span>
+                      </button>
+                      
+                      <div className={styles.totalInfo}>
+                          <div className={styles.detailsRow}>
+                              <div className={styles.seatCount}>
+                                  <Ticket size={14} className={styles.ticketIcon} />
+                                  <span>x{selectedSeats.length}</span>
+                              </div>
+                              <div className={styles.detailsLink}>
+                                  <span className={styles.detailsText}>التفاصيل</span>
+                                  <HelpCircle size={16} className={styles.detailsIcon} />
+                              </div>
+                          </div>
+                          <div className={styles.totalRow}>
+                              <span className={styles.totalAmount}>{selectedSeats.reduce((sum, s) => sum + s.price, 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                              <span className={styles.currencyLabel}>{currency}</span>
+                              <span className={styles.totalLabel}>:الإجمالي</span>
+                          </div>
+                      </div>
                   </div>
               )}
           </div>
