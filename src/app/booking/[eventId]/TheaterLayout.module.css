@@ -9,18 +9,74 @@
 }
 
 .header {
-  padding: 16px;
+  padding: 12px 20px;
   background: white;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-  z-index: 10;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
   direction: rtl;
+  border-bottom: 1px solid #f1f5f9;
 }
 
-.canvas {
-  flex: 1;
+.backButton {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1e293b;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.2s ease;
+}
+
+.backButton:hover {
+  background: #f1f5f9;
+}
+
+.headerInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.eventTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  background: #f8fafc;
+  padding: 6px 20px;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+}
+
+.eventSubtitle {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.headerAction {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.2s ease;
+}
+
+.headerAction:hover {
+  background: #f1f5f9;
+}
+
+.canvas { flex: 1;
   position: relative;
   background: white;
   overflow: hidden;
@@ -32,6 +88,11 @@
   width: 100%;
   height: 100%;
   position: relative;
+}
+
+.stage {
+  user-select: none;
+  pointer-events: none;
 }
 
 .section {

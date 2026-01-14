@@ -187,9 +187,9 @@ function updateCurvePreview() {
         seats.forEach((seat, i) => {
             const total = seats.length;
             const normalized = total > 1 ? (i - (total - 1) / 2) / ((total - 1) / 2) : 0;
-            const yOffset = Math.pow(normalized, 2) * intensity * 15;
-            const rotation = normalized * intensity * 10;
-            seat.style.transform = `translateY(-${yOffset}px) rotate(${rotation}deg)`;
+            const yOffset = -Math.pow(normalized, 2) * intensity * 15;
+            const rotation = -normalized * intensity * 12;
+            seat.style.transform = `translateY(${yOffset}px) rotate(${rotation}deg)`;
         });
     });
 
@@ -997,9 +997,9 @@ function renderSeat(section, row, seat, index, total) {
     if (section.curve > 0) {
         const intensity = section.curve / 100;
         const normalized = total > 1 ? (index - (total - 1) / 2) / ((total - 1) / 2) : 0;
-        const yOffset = Math.pow(normalized, 2) * intensity * 15;
-        const rotation = normalized * intensity * 8;
-        transform = `transform: translateY(-${yOffset}px) rotate(${rotation}deg);`;
+        const yOffset = -Math.pow(normalized, 2) * intensity * 15;
+        const rotation = -normalized * intensity * 8;
+        transform = `transform: translateY(${yOffset}px) rotate(${rotation}deg);`;
     }
 
     let background = seat.status === 'skipped' ? '' : section.color;
@@ -1463,9 +1463,9 @@ function renderSeat(
     if (section.curve > 0) {
         const intensity = section.curve / 100;
         const normalized = total > 1 ? (index - (total - 1) / 2) / ((total - 1) / 2) : 0;
-        const yOffset = Math.pow(normalized, 2) * intensity * 15;
-        const rotation = normalized * intensity * 8;
-        transform = \`translateY(-\${yOffset}px) rotate(\${rotation}deg)\`;
+        const yOffset = -Math.pow(normalized, 2) * intensity * 15;
+        const rotation = -normalized * intensity * 8;
+        transform = \`translateY(\${yOffset}px) rotate(\${rotation}deg)\`;
     }
 
     return (

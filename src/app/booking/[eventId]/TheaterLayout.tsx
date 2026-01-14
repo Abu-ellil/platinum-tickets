@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { HelpCircle, Ticket } from 'lucide-react';
+import { HelpCircle, Ticket, ChevronRight } from 'lucide-react';
 import styles from './TheaterLayout.module.css';
 import overlayImageFile from './overlay.png';
 
@@ -40,6 +40,7 @@ interface TheaterLayoutProps {
   title?: string;
   subtitle?: string;
   currency?: string;
+  onBack?: () => void;
   onContinue?: (selectedSeats: {
     sectionId: number;
     rowName: string;
@@ -54,6 +55,7 @@ export default function TheaterLayout({
   title = "Theater Layout",
   subtitle,
   currency = "SAR",
+  onBack,
   onContinue,
 }: TheaterLayoutProps) {
   // Embedded Data
@@ -3006,7 +3008,7 @@ export default function TheaterLayout({
   }
 ];
   const globalSeatSize = 18;
-  const initialOverlayImage = (overlayImageFile as any).src || overlayImageFile;
+  const overlayImage = (overlayImageFile as any).src || overlayImageFile;
 
   // State for selected seats
   const [selectedSeats, setSelectedSeats] = useState<{
@@ -3045,12 +3047,11 @@ export default function TheaterLayout({
   };
 
   // State for zoom and pan
-  const [scale, setScale] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [scale, setScale] = useState(0.8);
+  const [pan, setPan] = useState({ x: 50, y: 50 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(null);
-  const [overlayImage, setOverlayImage] = useState<string | null>(initialOverlayImage);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -3149,17 +3150,6 @@ export default function TheaterLayout({
       onSeatClick?.(newSeat.sectionId, newSeat.rowName, newSeat.seatNumber);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-              setOverlayImage(event.target?.result as string);
-          };
-          reader.readAsDataURL(file);
-      }
-  };
-
   const categories = Array.from(new Set(sections.map(s => JSON.stringify({ color: s.color, price: s.price }))))
     .map(s => JSON.parse(s));
 
@@ -3167,38 +3157,18 @@ export default function TheaterLayout({
 
   return (
       <div className={styles.container}>
-          <input
-              type="file"
-              id="overlayImageInput"
-              accept="image/*"
-              style={{ display: 'none' }}
-              onChange={handleImageUpload}
-          />
-
           {/* Header */}
-          <div className={styles.header}>
-              <div style={{ width: '40px' }} />
-              <div style={{ textAlign: 'center' }}>
-                  <h1 style={{ margin: 0, fontSize: '18px', color: '#1a1a2e' }}>{title}</h1>
-                  {subtitle && <p style={{ margin: 0, fontSize: '12px', color: '#666' }}>{subtitle}</p>}
+            <div className={styles.header}>
+                <div className={styles.backButton} onClick={() => onBack ? onBack() : window.history.back()}>
+                    <ChevronRight size={24} />
+                </div>
+              <div className={styles.headerInfo}>
+                  <h1 className={styles.eventTitle}>{title}</h1>
+                  {subtitle && <p className={styles.eventSubtitle}>{subtitle}</p>}
               </div>
-              <button
-                  onClick={() => document.getElementById('overlayImageInput')?.click()}
-                  style={{
-                      padding: '8px 12px',
-                      background: '#f0f0f0',
-                      border: '1px solid #ddd',
-                      borderRadius: '6px',
-                      fontSize: '18px',
-                      cursor: 'pointer',
-                      color: '#555',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                  }}
-              >
-                  🖼️
-              </button>
+              <div className={styles.headerAction}>
+                  <HelpCircle size={20} />
+              </div>
           </div>
 
           {/* Canvas */}
@@ -3224,23 +3194,49 @@ export default function TheaterLayout({
                   }}
               >
                   {/* Overlay Image */}
-                  {overlayImage && (
-                      <img
-                          src={overlayImage}
-                          alt="Overlay"
-                          style={{
-                              position: 'absolute',
-                              top: '43px',
-                              left: '256px',
-                              width: '997px',
-                              height: '812px',
-                              opacity: overlayOpacity,
-                              pointerEvents: 'none',
-                              zIndex: 1,
-                              maxWidth: 'none',
-                          }}
-                      />
-                  )}
+                  <img
+                      src={overlayImage}
+                      alt="Overlay"
+                      style={{
+                          position: 'absolute',
+                          top: '43px',
+                          left: '256px',
+                          width: '997px',
+                          height: '812px',
+                          opacity: overlayOpacity,
+                          pointerEvents: 'none',
+                          zIndex: 1,
+                          maxWidth: 'none',
+                      }}
+                  />
+
+                  {/* Stage */}
+                  <div 
+                      className={styles.stage}
+                      style={{
+                          position: 'absolute',
+                          top: '10px',
+                          left: '754.5px', // Centered relative to the overlay image (256 + 997/2)
+                          transform: 'translateX(-50%)',
+                          width: '600px',
+                          height: '45px',
+                          backgroundColor: '#f1f5f9',
+                          borderRadius: '0 0 120px 120px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#94a3b8',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          letterSpacing: '4px',
+                          zIndex: 10,
+                          border: '1px solid #e2e8f0',
+                          borderTop: 'none',
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+                      }}
+                  >
+                      STAGE
+                  </div>
 
                   {sections.map((section) => (
                       <div
@@ -3259,13 +3255,11 @@ export default function TheaterLayout({
                               ...(scale < DETAIL_THRESHOLD ? { 
                                 width: '100px', 
                                 height: '60px',
-                                backgroundColor: section.color + '44'
+                                backgroundColor: 'transparent'
                               } : {}),
                           }}
                       >
-                          {scale < DETAIL_THRESHOLD ? (
-                              <span style={{ fontSize: '10px', color: '#333', fontWeight: 'bold' }}>{section.name}</span>
-                          ) : (
+                          {scale < DETAIL_THRESHOLD ? null : (
                               <>
                                   {section.rows.map((row: any) => (
                                       <div
@@ -3287,8 +3281,8 @@ export default function TheaterLayout({
                                               const totalSeats = row.seats.length;
                                               const normalized = totalSeats > 1 ? (seatIndex - (totalSeats - 1) / 2) / ((totalSeats - 1) / 2) : 0;
                                               const curveIntensity = (section.curve || 0) / 100;
-                                              const yOffset = Math.pow(normalized, 2) * curveIntensity * 20;
-                                              const seatRotation = normalized * curveIntensity * 15;
+                                              const yOffset = -Math.pow(normalized, 2) * curveIntensity * 20;
+                                              const seatRotation = -normalized * curveIntensity * 15;
 
                                               return (
                                                   <div
