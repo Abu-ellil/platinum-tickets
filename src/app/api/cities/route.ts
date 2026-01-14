@@ -9,7 +9,6 @@ export async function GET() {
   try {
     await dbConnect();
     
-    console.log('GET /api/cities - Database connected');
     const cities = await City.find({})
       .sort({ 'name.en': 1 })
       .lean();

@@ -23,7 +23,7 @@ async function dbConnect(): Promise<mongoose.Connection> {
     );
   }
 
-  if (cached!.conn) {
+  if (cached!.conn && cached!.conn.readyState === 1) {
     return cached!.conn;
   }
 

@@ -151,7 +151,6 @@ export default function SlidesManagement() {
                     </div>
                 </SheetContent>
             </Sheet>
-</div>
 
             {loading ? (
                 <div className="text-center py-12">
