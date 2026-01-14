@@ -1,17 +1,60 @@
-import React, { useState, useRef, useEffect } from 'react';
+'use client';
+
+import React, { useState, useRef } from 'react';
+import styles from './TheaterLayout.module.css';
+import overlayImageFile from './overlay.png';
+
+// Types
+interface Seat {
+    number: number;
+    status: 'available' | 'skipped' | 'pinned';
+}
+
+interface Row {
+    id: number;
+    name: string;
+    aisles: number;
+    seats: Seat[];
+}
+
+interface Section {
+    id: number;
+    name: string;
+    color: string;
+    price: number;
+    curve: number;
+    skew: number;
+    seatGap: number;
+    rowGap: number;
+    rotation: number;
+    rowIndex: number;
+    hasBorder: boolean;
+    x: number;
+    y: number;
+    rows: Row[];
+}
 
 interface TheaterLayoutProps {
   onSeatClick?: (sectionId: number, rowName: string, seatNumber: number) => void;
   title?: string;
   subtitle?: string;
+  onContinue?: (selectedSeats: {
+    sectionId: number;
+    rowName: string;
+    seatNumber: number;
+    price: number;
+    sectionName: string;
+  }[]) => void;
 }
 
 export default function TheaterLayout({ 
-  onSeatClick, 
+  onSeatClick,
   title = "Theater Layout",
-  subtitle = "Global Arena • 19:30"
+  subtitle,
+  onContinue,
 }: TheaterLayoutProps) {
-  const sections = [
+  // Embedded Data
+  const sections: Section[] = [
   {
     "id": 1768347722025,
     "name": "VIP",
@@ -2959,16 +3002,17 @@ export default function TheaterLayout({
     ]
   }
 ];
-  const seatSize = 20;
+  const globalSeatSize = 18;
+  const initialOverlayImage = (overlayImageFile as any).src || overlayImageFile;
 
-  // State for selected seat
-  const [selectedSeat, setSelectedSeat] = useState<{
+  // State for selected seats
+  const [selectedSeats, setSelectedSeats] = useState<{
       sectionId: number;
       rowName: string;
       seatNumber: number;
       price: number;
       sectionName: string;
-  } | null>(null);
+  }[]>([]);
 
   // State for zoom and pan
   const [scale, setScale] = useState(1);
@@ -2976,6 +3020,7 @@ export default function TheaterLayout({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(null);
+  const [overlayImage, setOverlayImage] = useState<string | null>(initialOverlayImage);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -2995,7 +3040,7 @@ export default function TheaterLayout({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('.seat')) return;
+    if ((e.target as HTMLElement).closest('.' + styles.seat)) return;
     setIsDragging(true);
     setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
   };
@@ -3020,13 +3065,11 @@ export default function TheaterLayout({
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    if ((e.target as HTMLElement).closest('.seat')) return;
+    if ((e.target as HTMLElement).closest('.' + styles.seat)) return;
 
     if (e.touches.length === 2) {
-      // Pinch start
       setLastTouchDistance(getDistance(e.touches));
     } else if (e.touches.length === 1) {
-      // Pan start
       const touch = e.touches[0];
       setIsDragging(true);
       setDragStart({ x: touch.clientX - pan.x, y: touch.clientY - pan.y });
@@ -3035,7 +3078,6 @@ export default function TheaterLayout({
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (e.touches.length === 2) {
-       // Pinch Move
        const currentDistance = getDistance(e.touches);
        if (lastTouchDistance) {
          const delta = currentDistance / lastTouchDistance;
@@ -3044,7 +3086,6 @@ export default function TheaterLayout({
          setLastTouchDistance(currentDistance);
        }
     } else if (e.touches.length === 1 && isDragging) {
-      // Pan Move
       const touch = e.touches[0];
       setPan({
         x: touch.clientX - dragStart.x,
@@ -3054,316 +3095,266 @@ export default function TheaterLayout({
   };
 
   const handleTouchEnd = () => {
-    setIsDragging(false);
-    setLastTouchDistance(null);
+      setIsDragging(false);
+      setLastTouchDistance(null);
   };
 
-  // Center initial view
-  useEffect(() => {
-    if (containerRef.current && contentRef.current) {
-      const container = containerRef.current.getBoundingClientRect();
-      const content = contentRef.current.getBoundingClientRect();
-      // Simple centering logic could be added here
-    }
-  }, []);
+  const handleSeatClick = (e: React.MouseEvent, newSeat: any) => {
+      e.stopPropagation();
 
-  const zoomIn = () => setScale(s => Math.min(MAX_SCALE, s + 0.2));
-  const zoomOut = () => setScale(s => Math.max(MIN_SCALE, s - 0.2));
+      setSelectedSeats(prev => {
+          const exists = prev.find(s =>
+              s.sectionId === newSeat.sectionId &&
+              s.rowName === newSeat.rowName &&
+              s.seatNumber === newSeat.seatNumber
+          );
 
-  // Extract unique categories for legend
+          if (exists) {
+              return prev.filter(s => s !== exists);
+          } else {
+              return [...prev, newSeat];
+          }
+      });
+
+      onSeatClick?.(newSeat.sectionId, newSeat.rowName, newSeat.seatNumber);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+              setOverlayImage(event.target?.result as string);
+          };
+          reader.readAsDataURL(file);
+      }
+  };
+
   const categories = Array.from(new Set(sections.map(s => JSON.stringify({ color: s.color, price: s.price }))))
     .map(s => JSON.parse(s));
 
+  const overlayOpacity = scale < DETAIL_THRESHOLD ? 1 : 0;
+
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      height: '100vh', 
-      background: 'white', 
-      fontFamily: 'system-ui, sans-serif',
-      overflow: 'hidden'
-    }}>
-      {/* Header */}
-      <div style={{ 
-        padding: '16px', 
-        background: 'white', 
-        boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-        zIndex: 10,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        direction: 'rtl'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <h1 style={{ margin: 0, fontSize: '18px', color: '#333' }}>{title}</h1>
-          <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#666' }}>{subtitle}</p>
-        </div>
-      </div>
+      <div className={styles.container}>
+          <input
+              type="file"
+              id="overlayImageInput"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleImageUpload}
+          />
 
-      {/* Canvas */}
-      <div 
-        ref={containerRef}
-        style={{ 
-          flex: 1, 
-          position: 'relative', 
-          cursor: isDragging ? 'grabbing' : 'grab',
-          background: '#f8f9fa',
-          overflow: 'hidden',
-          touchAction: 'none'
-        }}
-        onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        <div 
-          ref={contentRef}
-          style={{
-            transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
-            transformOrigin: '0 0',
-            transition: isDragging ? 'none' : 'transform 0.1s ease-out',
-            width: '100%',
-            height: '100%'
-          }}
-        >
-          {sections.map((section) => (
-            <div
-              key={section.id}
-              style={{
-                position: 'absolute',
-                left: section.x + 'px',
-                top: section.y + 'px',
-                transform: `rotate(${section.rotation}deg) skewX(${section.skew}deg)`,
-                // Show border in overview, hidden in detail
-                border: scale < DETAIL_THRESHOLD ? 'none' : (section.hasBorder ? `3px solid ${section.color}` : 'none'),
-                borderRadius: '10px',
-                padding: '12px 15px',
-                // Detailed view styles
-                ...(scale < DETAIL_THRESHOLD ? {
-                  backgroundColor: section.color,
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                  minWidth: '150px',
-                  minHeight: '100px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                } : {})
-              }}
-            >
-              {/* Overview Mode Content */}
-              {scale < DETAIL_THRESHOLD ? (
-                 <div style={{ 
-                   color: 'white', 
-                   fontSize: `${24 / scale}px`, // Counter-scale text
-                   fontWeight: 'bold',
-                   textAlign: 'center',
-                   textShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                 }}>
-                   {section.name}
-                 </div>
-              ) : (
-                /* Detail Mode Content */
-                <>
-                  <div style={{ 
-                    position: 'absolute', 
-                    top: '-20px', 
-                    left: '0', 
-                    width: '100%', 
-                    textAlign: 'center',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    color: section.color
-                  }}>
-                    {section.name}
-                  </div>
-                  {section.rows.map((row: any) => (
-                    <div key={row.id} style={{ display: 'flex', gap: section.seatGap + 'px', marginBottom: section.rowGap + 'px' }}>
-                      {/* Row Label */}
-                      <span style={{ 
-                        width: '20px', 
-                        fontSize: '10px', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        color: '#999'
-                      }}>
-                        {row.name}
-                      </span>
-                      
-                      {/* Seats */}
-                      {row.seats.map((seat: any) => {
-                          const isSelected =
-                              selectedSeat?.sectionId === section.id &&
-                              selectedSeat?.rowName === row.name &&
-                              selectedSeat?.seatNumber === seat.number;
+          {/* Header */}
+          <div className={styles.header}>
+              <div style={{ width: '40px' }} />
+              <div style={{ textAlign: 'center' }}>
+                  <h1 style={{ margin: 0, fontSize: '18px', color: '#1a1a2e' }}>{title}</h1>
+                  {subtitle && <p style={{ margin: 0, fontSize: '12px', color: '#666' }}>{subtitle}</p>}
+              </div>
+              <button
+                  onClick={() => document.getElementById('overlayImageInput')?.click()}
+                  style={{
+                      padding: '8px 12px',
+                      background: '#f0f0f0',
+                      border: '1px solid #ddd',
+                      borderRadius: '6px',
+                      fontSize: '18px',
+                      cursor: 'pointer',
+                      color: '#555',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                  }}
+              >
+                  🖼️
+              </button>
+          </div>
 
-                          return (
-                            <div
-                              key={seat.number}
-                              className="seat"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const newSelection = {
-                                    sectionId: section.id,
-                                    rowName: row.name,
-                                    seatNumber: seat.number,
-                                    price: section.price,
-                                    sectionName: section.name,
-                                };
-                                setSelectedSeat(newSelection);
-                                onSeatClick?.(section.id, row.name, seat.number);
-                              }}
-                              style={{
-                                width: seatSize + 'px',
-                                height: seatSize + 'px',
-                                background: isSelected ? 'white' : (seat.status === 'skipped' ? '#e0e0e0' : section.color),
-                                border: isSelected
-                                    ? `2px solid ${section.color}`
-                                    : (seat.status === 'pinned' ? '2px solid #fbbf24' : '1px solid rgba(0,0,0,0.1)'),
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                opacity: seat.status === 'skipped' ? 0.3 : 1,
-                                transition: 'transform 0.1s',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
-                              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                              title={`Row ${row.name} - Seat ${seat.number}`}
-                            >
-                                {isSelected && (
-                                    <span style={{
-                                        color: section.color,
-                                        fontSize: `${seatSize * 0.7}px`,
-                                        fontWeight: 'bold',
-                                        lineHeight: 1
-                                    }}>✓</span>
-                                )}
-                            </div>
-                          );
-                      })}
-                    </div>
+          {/* Canvas */}
+          <div
+              ref={containerRef}
+              className={styles.canvas}
+              style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+              onWheel={handleWheel}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+          >
+              <div
+                  ref={contentRef}
+                  className={styles.content}
+                  style={{
+                      transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
+                      transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+                  }}
+              >
+                  {/* Overlay Image */}
+                  {overlayImage && (
+                      <img
+                          src={overlayImage}
+                          alt="Overlay"
+                          style={{
+                              position: 'absolute',
+                              top: '43px',
+                              left: '256px',
+                              width: '997px',
+                              height: '812px',
+                              opacity: overlayOpacity,
+                              pointerEvents: 'none',
+                              zIndex: 1,
+                              maxWidth: 'none',
+                          }}
+                      />
+                  )}
+
+                  {sections.map((section) => (
+                      <div
+                          key={section.id}
+                          className={`${styles.section} ${scale < DETAIL_THRESHOLD ? styles.sectionOverview : ''}`}
+                          style={{
+                              left: section.x + 'px',
+                              top: section.y + 'px',
+                              transform: `rotate(${section.rotation}deg) skewX(${section.skew}deg)`,
+                              border:
+                                  scale < DETAIL_THRESHOLD
+                                      ? 'none'
+                                      : section.hasBorder
+                                          ? `3px solid ${section.color}`
+                                          : 'none',
+                              ...(scale < DETAIL_THRESHOLD ? { 
+                                width: '100px', 
+                                height: '60px',
+                                backgroundColor: section.color + '44'
+                              } : {}),
+                          }}
+                      >
+                          {scale < DETAIL_THRESHOLD ? (
+                              <span style={{ fontSize: '10px', color: '#333', fontWeight: 'bold' }}>{section.name}</span>
+                          ) : (
+                              <>
+                                  {section.rows.map((row: any) => (
+                                      <div
+                                          key={row.id}
+                                          className={styles.row}
+                                          style={{
+                                              gap: section.seatGap + 'px',
+                                              marginBottom: section.rowGap + 'px',
+                                          }}
+                                      >
+                                          {row.seats.map((seat: any, seatIndex: number) => {
+                                              const isSelected = selectedSeats.some(s =>
+                                                  s.sectionId === section.id &&
+                                                  s.rowName === row.name &&
+                                                  s.seatNumber === seat.number
+                                              );
+
+                                              // Calculate curve effect
+                                              const totalSeats = row.seats.length;
+                                              const normalized = totalSeats > 1 ? (seatIndex - (totalSeats - 1) / 2) / ((totalSeats - 1) / 2) : 0;
+                                              const curveIntensity = (section.curve || 0) / 100;
+                                              const yOffset = Math.pow(normalized, 2) * curveIntensity * 20;
+                                              const seatRotation = normalized * curveIntensity * 15;
+
+                                              return (
+                                                  <div
+                                                      key={seat.number}
+                                                      className={styles.seat}
+                                                      onClick={(e) => handleSeatClick(e, {
+                                                          sectionId: section.id,
+                                                          rowName: row.name,
+                                                          seatNumber: seat.number,
+                                                          price: section.price,
+                                                          sectionName: section.name,
+                                                      })}
+                                                      style={{
+                                                          width: globalSeatSize + 'px',
+                                                          height: globalSeatSize + 'px',
+                                                          background: isSelected ? 'white' : (seat.status === 'skipped' ? '#e0e0e0' : section.color),
+                                                          border: isSelected
+                                                              ? `2px solid ${section.color}`
+                                                              : (seat.status === 'pinned' ? '2px solid #fbbf24' : '1px solid rgba(0,0,0,0.1)'),
+                                                          opacity: seat.status === 'skipped' ? 0.3 : 1,
+                                                          transform: `translateY(${yOffset}px) rotate(${seatRotation}deg)`,
+                                                      }}
+                                                  >
+                                                      {isSelected && (
+                                                          <span style={{
+                                                              color: section.color,
+                                                              fontSize: `${globalSeatSize * 0.7}px`,
+                                                              fontWeight: 'bold',
+                                                              lineHeight: 1,
+                                                              userSelect: 'none'
+                                                          }}>✓</span>
+                                                      )}
+                                                  </div>
+                                              );
+                                          })}
+                                      </div>
+                                  ))}
+                              </>
+                          )}
+                      </div>
                   ))}
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+              </div>
+          </div>
 
-      {/* Zoom Controls */}
-      <div style={{
-        position: 'absolute',
-        right: '20px',
-        top: '50%',
-        transform: 'translateY(-50%)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-        zIndex: 20
-      }}>
-        <button 
-          onClick={zoomIn}
-          style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            border: 'none',
-            background: 'white',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-            fontSize: '20px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#333'
-          }}
-        >+</button>
-        <button 
-          onClick={zoomOut}
-          style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            border: 'none',
-            background: 'white',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-            fontSize: '20px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#333'
-          }}
-        >-</button>
-      </div>
-
-      {/* Footer Info */}
-      <div style={{
-        background: 'white',
-        borderTop: '1px solid #eee',
-        padding: '16px 20px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        zIndex: 20,
-        direction: 'rtl'
-      }}>
-        {selectedSeat ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', width: '100%' }}>
-               <div style={{ flex: 1 }}>
-                   <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', color: '#1a1a1a' }}>
-                       EGP {selectedSeat.price.toFixed(2)}
-                   </h3>
-                   <div style={{ fontSize: '13px', color: '#666' }}>
-                       {selectedSeat.sectionName} • صف {selectedSeat.rowName} • مقعد {selectedSeat.seatNumber}
-                   </div>
-               </div>
-               <button style={{
-                   padding: '12px 32px',
-                   background: '#1a1a2e',
-                   color: 'white',
-                   border: 'none',
-                   borderRadius: '8px',
-                   fontSize: '16px',
-                   fontWeight: 600,
-                   cursor: 'pointer'
-               }}>
-                   التالي
-               </button>
-            </div>
-        ) : (
-            <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                {categories.map((cat, i) => (
-                  <div key={i} style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '8px', 
-                    background: '#f8f9fa', 
-                    padding: '6px 12px', 
-                    borderRadius: '20px',
-                    border: '1px solid #eee',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#333' }}>
-                      EGP {cat.price.toFixed(2)}
-                    </span>
-                    <span style={{ 
-                      width: '10px', 
-                      height: '10px', 
-                      borderRadius: '50%', 
-                      background: cat.color 
-                    }} />
+          {/* Footer Info */}
+          <div className={styles.footer}>
+              {selectedSeats.length > 0 ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                      <div style={{ textAlign: 'right', direction: 'rtl' }}>
+                          <div style={{ fontSize: '14px', color: '#666' }}>
+                              {selectedSeats.length} مقاعد مختارة
+                          </div>
+                          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1a1a2e' }}>
+                              {selectedSeats.reduce((sum, s) => sum + s.price, 0)} ر.س
+                          </div>
+                      </div>
+                      <button 
+                         onClick={() => onContinue?.(selectedSeats)}
+                        style={{
+                          padding: '12px 32px',
+                          background: '#1a1a2e',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '16px',
+                          fontWeight: 'bold'
+                      }}>
+                          إتمام الحجز
+                      </button>
                   </div>
-                ))}
-            </div>
-        )}
+              ) : (
+                  <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                      {categories.map((cat: any, i: number) => (
+                          <div
+                              key={i}
+                              style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  background: '#f8f9fa',
+                                  padding: '8px 16px',
+                                  borderRadius: '20px',
+                                  whiteSpace: 'nowrap'
+                              }}
+                          >
+                              <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: cat.color }} />
+                              <span style={{ fontSize: '12px', color: '#666' }}>{cat.price} ر.س</span>
+                          </div>
+                      ))}
+                  </div>
+              )}
+          </div>
       </div>
-    </div>
   );
 }

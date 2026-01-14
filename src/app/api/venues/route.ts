@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Venue from '@/models/Venue';
+import City from '@/models/City';
 
 // GET /api/venues - List venues (optionally filter by city)
 export async function GET(request: NextRequest) {
@@ -14,7 +15,7 @@ export async function GET(request: NextRequest) {
     if (cityId) query.cityId = cityId;
     
     const venues = await Venue.find(query)
-      .populate('cityId', 'name')
+      .populate({ path: 'cityId', model: City, select: 'name' })
       .sort({ 'name.en': 1 })
       .lean();
     

@@ -19,8 +19,8 @@ export async function GET(
     const { id } = await params;
 
     const event = await Event.findById(id)
-      .populate('venueId', 'name image')
-      .populate('cityId', 'name')
+      .populate({ path: 'venueId', model: Venue, select: 'name image' })
+      .populate({ path: 'cityId', model: City, select: 'name' })
       .lean();
 
     if (!event) {

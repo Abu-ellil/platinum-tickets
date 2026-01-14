@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
   if (status !== 'all') query.status = status;
   
   const events = await Event.find(query)
-    .populate('venueId', 'name image')
-    .populate('cityId', 'name')
+    .populate({ path: 'venueId', model: Venue, select: 'name image' })
+    .populate({ path: 'cityId', model: City, select: 'name' })
     .sort({ createdAt: -1 })
     .limit(limit)
     .lean();
