@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin, Share2, Info, Loader2, ArrowRight, Star, Heart, Bookmark } from "lucide-react";
+import { Calendar, MapPin, Share2, Info, Loader2, ArrowRight, Star, Heart, Bookmark, Play, ChevronLeft, ChevronRight, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useLanguage } from "@/lib/language-context";
@@ -23,6 +23,8 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
   const [similarEvents, setSimilarEvents] = useState<Event[]>([]);
   const [loadingSimilar, setLoadingSimilar] = useState(false);
   const [selectedShowTimeIndex, setSelectedShowTimeIndex] = useState(0);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showVideo, setShowVideo] = useState(false);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -162,16 +164,80 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
         </div>
       </header>
 
-      {/* Banner */}
-      <div className="relative aspect-[4/5] w-full bg-gray-100">
-        <Image
-          src={event.image || "https://images.unsplash.com/photo-1493225255756-d9584f8606e9"}
-          alt={eventTitle}
-          fill
-          className="object-cover"
-          priority
-          sizes="100vw"
-        />
+      {/* Banner / Gallery / Video */}
+      <div className="relative aspect-[4/5] w-full bg-gray-100 overflow-hidden">
+        {showVideo && event.video ? (
+          <div className="absolute inset-0 bg-black">
+            <video 
+              src={event.video} 
+              className="w-full h-full object-contain" 
+              controls 
+              autoPlay 
+            />
+            <button 
+              onClick={() => setShowVideo(false)}
+              className="absolute top-4 right-4 z-30 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center backdrop-blur-md"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        ) : (
+          <>
+            <Image
+              src={(event.images && event.images.length > 0) ? event.images[currentImageIndex] : (event.image || "https://images.unsplash.com/photo-1493225255756-d9584f8606e9")}
+              alt={eventTitle}
+              fill
+              className="object-cover transition-all duration-500"
+              priority
+              sizes="100vw"
+            />
+            
+            {/* Gallery Navigation */}
+            {event.images && event.images.length > 1 && (
+              <>
+                <div className="absolute inset-y-0 left-0 flex items-center px-4 z-10">
+                  <button 
+                    onClick={() => setCurrentImageIndex(prev => (prev === 0 ? event.images!.length - 1 : prev - 1))}
+                    className="w-10 h-10 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/30 transition-all"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+                </div>
+                <div className="absolute inset-y-0 right-0 flex items-center px-4 z-10">
+                  <button 
+                    onClick={() => setCurrentImageIndex(prev => (prev === event.images!.length - 1 ? 0 : prev + 1))}
+                    className="w-10 h-10 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/30 transition-all"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                </div>
+                {/* Dots */}
+                <div className="absolute bottom-16 left-0 right-0 flex justify-center gap-2 z-10">
+                  {event.images.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentImageIndex(idx)}
+                      className={`w-1.5 h-1.5 rounded-full transition-all ${idx === currentImageIndex ? 'bg-white w-4' : 'bg-white/50'}`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Video Play Button Overlay */}
+            {event.video && (
+              <div className="absolute inset-0 flex items-center justify-center z-10">
+                <button 
+                  onClick={() => setShowVideo(true)}
+                  className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/30 hover:scale-110 transition-transform shadow-2xl"
+                >
+                  <Play className="w-8 h-8 fill-white ml-1" />
+                </button>
+              </div>
+            )}
+          </>
+        )}
+        
         {/* Badges */}
         <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
           {event.statusBadge && (
@@ -192,18 +258,6 @@ export default function EventDetailsPage({ params }: EventDetailsPageProps) {
           </button>
           <button className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/30 transition-all border border-white/30">
             <Heart className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Navigation Arrows */}
-        <div className="absolute inset-y-0 left-0 flex items-center px-4 pointer-events-none">
-          <button className="w-10 h-10 rounded-full bg-black/10 backdrop-blur-sm flex items-center justify-center text-white pointer-events-auto hover:bg-black/20 transition-all">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"/></svg>
-          </button>
-        </div>
-        <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none">
-          <button className="w-10 h-10 rounded-full bg-black/10 backdrop-blur-sm flex items-center justify-center text-white pointer-events-auto hover:bg-black/20 transition-all">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"/></svg>
           </button>
         </div>
 

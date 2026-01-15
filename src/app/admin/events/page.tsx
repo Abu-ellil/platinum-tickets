@@ -20,6 +20,7 @@ import {
     Tag,
     DollarSign,
     Image as ImageIcon,
+    Video,
     Check,
     Loader2,
     Star
@@ -114,11 +115,16 @@ export default function EventsManagement() {
     const [categoryPrices, setCategoryPrices] = useState<CategoryPrice[]>([]);
     const [editingEvent, setEditingEvent] = useState<Event | null>(null);
     const [imageUrl, setImageUrl] = useState("");
+    const [images, setImages] = useState<string[]>([]);
+    const [videoUrl, setVideoUrl] = useState("");
     const [isUploading, setIsUploading] = useState(false);
+    const [isVideoUploading, setIsVideoUploading] = useState(false);
     const [currency, setCurrency] = useState("EGP");
     const [isSaving, setIsSaving] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const multiImagesRef = useRef<HTMLInputElement>(null);
+    const videoInputRef = useRef<HTMLInputElement>(null);
 
     // Initial Fetch
     useEffect(() => {
@@ -246,6 +252,8 @@ export default function EventsManagement() {
         setEventType(event.type);
         setCurrency(event.currency || "EGP");
         setImageUrl(event.image);
+        setImages(event.images || []);
+        setVideoUrl(event.video || "");
         
         if (event.showTimes && event.showTimes.length > 0) {
             setShowTimes(event.showTimes.map((st: { date: string | Date; time: string }, idx: number) => ({
@@ -339,6 +347,65 @@ export default function EventsManagement() {
         }
     };
 
+    const handleMultipleImagesSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        setIsUploading(true);
+        try {
+            const newUploadedImages: string[] = [];
+            for (let i = 0; i < files.length; i++) {
+                const result = await uploadToCloudinary(files[i]);
+                if (result.secure_url) {
+                    newUploadedImages.push(result.secure_url);
+                }
+            }
+            setImages(prev => [...prev, ...newUploadedImages]);
+            
+            // If main image is empty, set it to the first uploaded image
+            if (!imageUrl && newUploadedImages.length > 0) {
+                setImageUrl(newUploadedImages[0]);
+            }
+        } catch (error) {
+            console.error("Multiple upload failed:", error);
+            alert(language === 'ar' ? "فشل رفع بعض الصور" : "Failed to upload some images");
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handleVideoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Basic check for video type
+        if (!file.type.startsWith('video/')) {
+            alert(language === 'ar' ? "يرجى اختيار ملف فيديو صالح" : "Please select a valid video file");
+            return;
+        }
+
+        setIsVideoUploading(true);
+        try {
+            const result = await uploadToCloudinary(file);
+            if (result.secure_url) {
+                setVideoUrl(result.secure_url);
+            }
+        } catch (error) {
+            console.error("Video upload failed:", error);
+            alert(language === 'ar' ? "فشل رفع الفيديو" : "Video upload failed");
+        } finally {
+            setIsVideoUploading(false);
+        }
+    };
+
+    const removeImage = (index: number) => {
+        setImages(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const removeVideo = () => {
+        setVideoUrl("");
+    };
+
     // Reset form
     const resetForm = () => {
         setEditingEvent(null);
@@ -358,6 +425,8 @@ export default function EventsManagement() {
             color: sc.color
         })));
         setImageUrl("");
+        setImages([]);
+        setVideoUrl("");
         setCurrency("EGP");
     };
 
@@ -395,7 +464,9 @@ export default function EventsManagement() {
                     categoryId: cp.label || cp.categoryId, // Use label for matching theater sections
                     price: cp.price
                 })),
-                image: imageUrl || "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=800",
+                image: imageUrl || (images.length > 0 ? images[0] : "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=800"),
+                images: images,
+                video: videoUrl,
                 currency: currency,
                 status: 'active',
                 type: eventType,
@@ -497,45 +568,127 @@ export default function EventsManagement() {
 
                             <div className="flex-1 overflow-y-auto p-6 space-y-6">
                                 {/* Image Upload */}
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <ImageIcon className="h-4 w-4" />
-                                        {language === 'ar' ? 'صورة الفعالية' : 'Event Image'}
-                                    </label>
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        onChange={handleImageSelect}
-                                        accept="image/*"
-                                        className="hidden"
-                                    />
-                                    {imageUrl ? (
-                                        <div className="relative aspect-video rounded-2xl overflow-hidden group">
-                                            <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                                                <Button
-                                                    variant="secondary"
-                                                    size="sm"
-                                                    onClick={() => fileInputRef.current?.click()}
-                                                    className="rounded-xl"
-                                                >
-                                                    {language === 'ar' ? 'تغيير' : 'Change'}
-                                                </Button>
-                                                {isUploading && (
-                                                    <div className="flex items-center gap-2 text-white">
-                                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                                        <span className="text-sm">Uploading...</span>
-                                                    </div>
-                                                )}
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                            <ImageIcon className="h-4 w-4" />
+                                            {language === 'ar' ? 'الصورة الرئيسية' : 'Main Image'}
+                                        </label>
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={handleImageSelect}
+                                            accept="image/*"
+                                            className="hidden"
+                                        />
+                                        {imageUrl ? (
+                                            <div className="relative aspect-video rounded-2xl overflow-hidden group">
+                                                <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                                    <Button
+                                                        variant="secondary"
+                                                        size="sm"
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        className="rounded-xl"
+                                                    >
+                                                        {language === 'ar' ? 'تغيير' : 'Change'}
+                                                    </Button>
+                                                </div>
                                             </div>
+                                        ) : (
+                                            <div
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="aspect-video bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50 transition-all cursor-pointer"
+                                            >
+                                                <Upload className="h-8 w-8 mb-2" />
+                                                <span className="text-xs font-bold">{language === 'ar' ? 'اضغط لرفع الصورة' : 'Click to upload image'}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Multiple Images */}
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                            <ImageIcon className="h-4 w-4" />
+                                            {language === 'ar' ? 'صور إضافية' : 'Additional Images'}
+                                        </label>
+                                        <input
+                                            type="file"
+                                            ref={multiImagesRef}
+                                            onChange={handleMultipleImagesSelect}
+                                            accept="image/*"
+                                            multiple
+                                            className="hidden"
+                                        />
+                                        <div className="grid grid-cols-4 gap-2">
+                                            {images.map((img, idx) => (
+                                                <div key={idx} className="relative aspect-square rounded-xl overflow-hidden group">
+                                                    <img src={img} alt={`Preview ${idx}`} className="w-full h-full object-cover" />
+                                                    <button
+                                                        onClick={() => removeImage(idx)}
+                                                        className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            <button
+                                                onClick={() => multiImagesRef.current?.click()}
+                                                className="aspect-square rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center hover:border-blue-400 hover:bg-blue-50 transition-all text-gray-400 hover:text-blue-600"
+                                            >
+                                                <Plus className="h-6 w-6" />
+                                            </button>
                                         </div>
-                                    ) : (
-                                        <div
-                                            onClick={() => fileInputRef.current?.click()}
-                                            className="aspect-video bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50 transition-all cursor-pointer"
-                                        >
-                                            <Upload className="h-8 w-8 mb-2" />
-                                            <span className="text-xs font-bold">{language === 'ar' ? 'اضغط لرفع الصورة' : 'Click to upload image'}</span>
+                                    </div>
+
+                                    {/* Video Upload */}
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                            <Video className="h-4 w-4" />
+                                            {language === 'ar' ? 'فيديو الفعالية' : 'Event Video'}
+                                        </label>
+                                        <input
+                                            type="file"
+                                            ref={videoInputRef}
+                                            onChange={handleVideoSelect}
+                                            accept="video/*"
+                                            className="hidden"
+                                        />
+                                        {videoUrl ? (
+                                            <div className="relative aspect-video rounded-2xl overflow-hidden group bg-black">
+                                                <video src={videoUrl} className="w-full h-full object-contain" controls />
+                                                <button
+                                                    onClick={removeVideo}
+                                                    className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div
+                                                onClick={() => videoInputRef.current?.click()}
+                                                className={`w-full h-20 rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center gap-3 transition-all cursor-pointer ${isVideoUploading ? 'bg-blue-50' : 'bg-gray-50 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50'}`}
+                                            >
+                                                {isVideoUploading ? (
+                                                    <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                                                ) : (
+                                                    <Upload className="h-6 w-6 text-gray-400" />
+                                                )}
+                                                <span className="text-sm font-bold text-gray-400">
+                                                    {isVideoUploading 
+                                                        ? (language === 'ar' ? 'جاري الرفع...' : 'Uploading...') 
+                                                        : (language === 'ar' ? 'رفع فيديو' : 'Upload Video')}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    {(isUploading || isVideoUploading) && (
+                                        <div className="flex items-center gap-2 text-blue-600 bg-blue-50 p-3 rounded-xl animate-pulse">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            <span className="text-sm font-medium">
+                                                {language === 'ar' ? 'جاري رفع الملفات...' : 'Uploading files...'}
+                                            </span>
                                         </div>
                                     )}
                                 </div>
@@ -718,11 +871,11 @@ export default function EventsManagement() {
                                                 onChange={(e) => setCurrency(e.target.value)}
                                                 className="h-9 px-3 rounded-lg bg-gray-100 text-sm font-medium"
                                             >
-                                                <option value="EGP">EGP</option>
-                                                <option value="SAR">SAR</option>
-                                                <option value="AED">AED</option>
-                                                <option value="QAR">QAR</option>
-                                                <option value="BHD">BHD</option>
+                                                {ARABIC_CURRENCIES.map(curr => (
+                                                    <option key={curr.code} value={curr.code}>
+                                                        {curr.code} - {curr.name[language === 'ar' ? 'ar' : 'en']}
+                                                    </option>
+                                                ))}
                                             </select>
                                         </div>
                                     </div>

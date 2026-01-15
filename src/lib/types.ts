@@ -72,6 +72,8 @@ export interface Event {
      price: number;
    }[];
    image: string;
+   images?: string[];
+   video?: string;
    currency: string;
    status: string;
    type: string;

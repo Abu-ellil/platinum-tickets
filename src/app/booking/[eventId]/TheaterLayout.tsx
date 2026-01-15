@@ -3191,6 +3191,55 @@ export default function TheaterLayout({
       setLastTouchDistance(null);
   };
 
+  const handleSectionClick = (section: Section) => {
+    if (scale >= DETAIL_THRESHOLD) return;
+
+    if (containerRef.current) {
+      const containerWidth = containerRef.current.clientWidth;
+      const containerHeight = containerRef.current.clientHeight;
+      
+      const newScale = 1.0;
+      
+      // Calculate center based on the section's position and its overview dimensions
+      const sectionWidth = 100;
+      const sectionHeight = 60;
+      
+      const sectionCenterX = section.x + sectionWidth / 2;
+      const sectionCenterY = section.y + sectionHeight / 2;
+      
+      setScale(newScale);
+      setPan({
+        x: (containerWidth / 2) - (sectionCenterX * newScale),
+        y: (containerHeight / 2) - (sectionCenterY * newScale)
+      });
+    }
+  };
+
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (scale >= DETAIL_THRESHOLD) return;
+    
+    // If it's a drag, don't trigger click
+    if (isDragging) return;
+
+    if (containerRef.current && contentRef.current) {
+      const containerWidth = containerRef.current.clientWidth;
+      const containerHeight = containerRef.current.clientHeight;
+      const rect = contentRef.current.getBoundingClientRect();
+      
+      // Calculate click position relative to the content's (0,0) point
+      const x = (e.clientX - rect.left) / scale;
+      const y = (e.clientY - rect.top) / scale;
+      
+      const newScale = 1.0;
+      
+      setScale(newScale);
+      setPan({
+        x: (containerWidth / 2) - (x * newScale),
+        y: (containerHeight / 2) - (y * newScale)
+      });
+    }
+  };
+
   const handleSeatClick = (e: React.MouseEvent, newSeat: {
       sectionId: number;
       rowName: string;
@@ -3264,6 +3313,7 @@ export default function TheaterLayout({
                   <img
                       src={overlayImage}
                       alt="Overlay"
+                      onClick={handleOverlayClick}
                       style={{
                           position: 'absolute',
                           top: '43px',
@@ -3271,15 +3321,27 @@ export default function TheaterLayout({
                           width: '997px',
                           height: '812px',
                           opacity: overlayOpacity,
-                          pointerEvents: 'none',
+                          pointerEvents: scale < DETAIL_THRESHOLD ? 'auto' : 'none',
                           zIndex: 1,
                           maxWidth: 'none',
+                          cursor: scale < DETAIL_THRESHOLD ? 'pointer' : 'default',
                       }}
                   />
 
                   {/* Stage */}
                   <div 
                       className={styles.stage}
+                      onClick={() => {
+                        if (scale < DETAIL_THRESHOLD && containerRef.current) {
+                            const containerWidth = containerRef.current.clientWidth;
+                            const containerHeight = containerRef.current.clientHeight;
+                            setScale(1.0);
+                            setPan({
+                                x: (containerWidth / 2) - (754.5 * 1.0),
+                                y: (containerHeight / 2) - (100 * 1.0)
+                            });
+                        }
+                      }}
                       style={{
                           position: 'absolute',
                           top: '10px',
@@ -3299,7 +3361,9 @@ export default function TheaterLayout({
                           zIndex: 10,
                           border: '1px solid #e2e8f0',
                           borderTop: 'none',
-                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+                          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                          cursor: scale < DETAIL_THRESHOLD ? 'pointer' : 'default',
+                          pointerEvents: 'auto'
                       }}
                   >
                       STAGE
@@ -3309,10 +3373,12 @@ export default function TheaterLayout({
                       <div
                           key={section.id}
                           className={`${styles.section} ${scale < DETAIL_THRESHOLD ? styles.sectionOverview : ''}`}
+                          onClick={() => handleSectionClick(section)}
                           style={{
                               left: section.x + 'px',
                               top: section.y + 'px',
                               transform: `rotate(${section.rotation}deg) skewX(${section.skew}deg)`,
+                              cursor: scale < DETAIL_THRESHOLD ? 'pointer' : 'default',
                               border:
                                   scale < DETAIL_THRESHOLD
                                       ? 'none'
@@ -3322,7 +3388,6 @@ export default function TheaterLayout({
                               ...(scale < DETAIL_THRESHOLD ? { 
                                 width: '100px', 
                                 height: '60px',
-                                backgroundColor: 'transparent'
                               } : {}),
                           }}
                       >

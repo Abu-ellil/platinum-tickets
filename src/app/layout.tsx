@@ -1,19 +1,21 @@
 import type { Metadata } from "next";
-import { Tajawal } from "next/font/google";
+import { Cairo } from "next/font/google";
 import "./globals.css";
 
-const tajawal = Tajawal({
-  subsets: ["arabic"],
-  weight: ["200", "300", "400", "500", "700", "800", "900"],
-  variable: "--font-tajawal",
+const cairo = Cairo({
+  subsets: ["latin", "latin-ext", "arabic"],
+  weight: ["200", "300", "400", "500", "600", "700", "800", "900"],
+  variable: "--font-cairo",
 });
 
 import { LanguageProvider } from "@/lib/language-context";
+import { CityProvider } from "@/lib/city-context";
 import { MainLayoutWrapper } from "@/components/main-layout-wrapper";
 
 export const metadata: Metadata = {
   title: "Platinumlist - Event Tickets, Attractions & Concerts",
-  description: "Book tickets for concerts, events, attractions and festivals in the GCC.",
+  description:
+    "Book tickets for concerts, events, attractions and festivals in the GCC.",
 };
 
 export default function RootLayout({
@@ -24,14 +26,12 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
       <body
-        className={`${tajawal.variable} font-sans antialiased bg-gray-50 flex flex-col min-h-screen`}
+        className={`${cairo.variable} font-sans antialiased bg-gray-50 flex flex-col min-h-screen`}
         suppressHydrationWarning
       >
         <LanguageProvider>
           <CityProvider>
-            <MainLayoutWrapper>
-              {children}
-            </MainLayoutWrapper>
+            <MainLayoutWrapper>{children}</MainLayoutWrapper>
           </CityProvider>
         </LanguageProvider>
       </body>

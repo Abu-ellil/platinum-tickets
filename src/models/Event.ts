@@ -19,6 +19,8 @@ export interface IEvent extends Document {
   showTimes: IShowTime[];
   pricing: IPricing[];
   image: string;
+  images?: string[];
+  video?: string;
   currency: 'QAR' | 'SAR' | 'EGP' | 'AED' | 'BHD' | 'OMR' | 'MAD' | 'TRY';
   status: 'active' | 'soldOut' | 'cancelled' | 'draft';
   type: 'concert' | 'theater' | 'adventure' | 'festival' | 'comedy' | 'attraction' | 'sports' | 'music' | 'cinema' | 'adventures';
@@ -46,6 +48,8 @@ const EventSchema = new Schema<IEvent>(
       price: { type: Number, required: true },
     }],
     image: { type: String, required: true },
+    images: [{ type: String }],
+    video: { type: String },
     currency: { 
       type: String, 
       enum: ['QAR', 'SAR', 'EGP', 'AED', 'BHD', 'OMR', 'MAD', 'TRY'],
