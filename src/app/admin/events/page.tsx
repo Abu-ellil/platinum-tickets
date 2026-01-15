@@ -21,7 +21,8 @@ import {
     DollarSign,
     Image as ImageIcon,
     Check,
-    Loader2
+    Loader2,
+    Star
 } from "lucide-react";
 
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
@@ -78,6 +79,16 @@ interface CategoryPrice {
     price: number;
     color: string;
 }
+
+const STANDARD_CATEGORIES = [
+    { label: "VIP", color: "#ef4444" },
+    { label: "ROYAL", color: "#8b5cf6" },
+    { label: "PLATINUM", color: "#94a3b8" },
+    { label: "DIAMOND", color: "#3b82f6" },
+    { label: "GOLD", color: "#f59e0b" },
+    { label: "SILVER", color: "#cbd5e1" },
+    { label: "BRONZE", color: "#b45309" }
+];
 
 export default function EventsManagement() {
     const { language, dir } = useLanguage();
@@ -202,11 +213,14 @@ export default function EventsManagement() {
                     
                     const venue = json.data.find((v: Venue) => v._id === vId);
                     if (venue && venue.categories) {
-                        setCategoryPrices(venue.categories.map((cat: { id: string; label: string; color: string; defaultPrice: number }) => {
-                            const eventPrice = event.pricing?.find((p: { categoryId: string; price: number }) => p.categoryId === cat.id);
+                        setCategoryPrices(venue.categories.map((cat: any) => {
+                            const catLabel = typeof cat.label === 'string' ? cat.label : (language === 'ar' ? cat.label.ar : cat.label.en);
+                            const eventPrice = event.pricing?.find((p: { categoryId: string; price: number }) => 
+                                p.categoryId === cat.id || p.categoryId.toLowerCase() === catLabel.toLowerCase()
+                            );
                             return {
                                 categoryId: cat.id,
-                                label: cat.label,
+                                label: catLabel,
                                 price: eventPrice ? eventPrice.price : (cat.defaultPrice || 0),
                                 color: cat.color || '#3b82f6'
                             };
@@ -257,10 +271,40 @@ export default function EventsManagement() {
     };
 
     // Update category price
-    const updateCategoryPrice = (categoryId: string, price: number) => {
+    const updateCategoryPrice = (categoryId: string, field: "price" | "label", value: any) => {
         setCategoryPrices(categoryPrices.map(cp =>
-            cp.categoryId === categoryId ? { ...cp, price } : cp
+            cp.categoryId === categoryId ? { ...cp, [field]: value } : cp
         ));
+    };
+
+    const addCategoryPrice = () => {
+        const newId = `cat-${Date.now()}`;
+        setCategoryPrices([...categoryPrices, {
+            categoryId: newId,
+            label: "",
+            price: 0,
+            color: '#3b82f6'
+        }]);
+    };
+
+    const removeCategoryPrice = (categoryId: string) => {
+        setCategoryPrices(categoryPrices.filter(cp => cp.categoryId !== categoryId));
+    };
+
+    const addStandardCategories = () => {
+        const existingLabels = categoryPrices.map(cp => cp.label.toUpperCase());
+        const newCategories = STANDARD_CATEGORIES
+            .filter(sc => !existingLabels.includes(sc.label))
+            .map(sc => ({
+                categoryId: `std-${sc.label.toLowerCase()}-${Date.now()}`,
+                label: sc.label,
+                price: 0,
+                color: sc.color
+            }));
+        
+        if (newCategories.length > 0) {
+            setCategoryPrices([...categoryPrices, ...newCategories]);
+        }
     };
 
     // Handle image selection
@@ -299,7 +343,13 @@ export default function EventsManagement() {
         setEventType("concert");
         setEventTitle("");
         setShowTimes([{ id: "1", date: "", time: "" }]);
-        setCategoryPrices([]);
+        // Initialize with standard categories by default for new events
+        setCategoryPrices(STANDARD_CATEGORIES.map(sc => ({
+            categoryId: `std-${sc.label.toLowerCase()}-${Date.now()}`,
+            label: sc.label,
+            price: 0,
+            color: sc.color
+        })));
         setImageUrl("");
         setCurrency("EGP");
     };
@@ -334,8 +384,8 @@ export default function EventsManagement() {
                     date: new Date(`${st.date}T${st.time}`),
                     time: st.time
                 })),
-                pricing: categoryPrices.filter(cp => cp.price > 0).map(cp => ({
-                    categoryId: cp.categoryId,
+                pricing: categoryPrices.map(cp => ({
+                    categoryId: cp.label || cp.categoryId, // Use label for matching theater sections
                     price: cp.price
                 })),
                 image: imageUrl || "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=800",
@@ -629,13 +679,33 @@ export default function EventsManagement() {
                                 </div>
 
                                 {/* Category Pricing */}
-                                {categoryPrices.length > 0 && (
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                                <DollarSign className="h-4 w-4" />
-                                                {language === 'ar' ? 'أسعار التذاكر' : 'Ticket Prices'}
-                                            </label>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                            <DollarSign className="h-4 w-4" />
+                                            {language === 'ar' ? 'أسعار التذاكر' : 'Ticket Prices'}
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={addStandardCategories}
+                                                className="text-indigo-600 hover:text-indigo-700 text-[10px] md:text-xs border border-indigo-100 rounded-lg px-2"
+                                            >
+                                                <Star className="h-3 w-3 mr-1" />
+                                                {language === 'ar' ? 'الفئات الأساسية' : 'Standard Categories'}
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={addCategoryPrice}
+                                                className="text-blue-600 hover:text-blue-700 text-[10px] md:text-xs"
+                                            >
+                                                <Plus className="h-4 w-4 mr-1" />
+                                                {language === 'ar' ? 'إضافة فئة' : 'Add Category'}
+                                            </Button>
                                             <select
                                                 value={currency}
                                                 onChange={(e) => setCurrency(e.target.value)}
@@ -648,25 +718,46 @@ export default function EventsManagement() {
                                                 <option value="BHD">BHD</option>
                                             </select>
                                         </div>
-                                        <div className="space-y-2">
-                                            {categoryPrices.map(cp => (
-                                                <div key={cp.categoryId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                                                    <span
-                                                        className="w-4 h-4 rounded-sm shrink-0"
-                                                        style={{ backgroundColor: cp.color }}
-                                                    />
-                                                    <span className="text-sm font-medium text-gray-700 flex-1">{cp.label}</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {categoryPrices.length === 0 && (
+                                            <p className="text-xs text-gray-400 italic text-center py-4 bg-gray-50 rounded-xl border-2 border-dashed">
+                                                {language === 'ar' ? 'لم يتم العثور على فئات. أضف فئة يدوياً.' : 'No categories found. Add one manually.'}
+                                            </p>
+                                        )}
+                                        {categoryPrices.map(cp => (
+                                            <div key={cp.categoryId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                                                <span
+                                                    className="w-4 h-4 rounded-sm shrink-0"
+                                                    style={{ backgroundColor: cp.color }}
+                                                />
+                                                <Input
+                                                    value={cp.label}
+                                                    onChange={(e) => updateCategoryPrice(cp.categoryId, "label", e.target.value)}
+                                                    placeholder={language === 'ar' ? 'اسم الفئة (مثل: VIP)' : 'Category label (e.g. VIP)'}
+                                                    className="h-9 flex-1 bg-white border border-gray-200 rounded-lg text-sm"
+                                                />
+                                                <div className="flex items-center gap-2">
                                                     <Input
                                                         type="number"
                                                         value={cp.price}
-                                                        onChange={(e) => updateCategoryPrice(cp.categoryId, parseFloat(e.target.value) || 0)}
-                                                        className="h-9 w-28 bg-white border border-gray-200 rounded-lg text-right"
+                                                        onChange={(e) => updateCategoryPrice(cp.categoryId, "price", parseFloat(e.target.value) || 0)}
+                                                        className="h-9 w-24 bg-white border border-gray-200 rounded-lg text-right text-sm"
                                                     />
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => removeCategoryPrice(cp.categoryId)}
+                                                        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
                                                 </div>
-                                            ))}
-                                        </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                )}
+                                </div>
                             </div>
 
                             <div className="p-6 border-t bg-gray-50/50 space-y-3">
@@ -814,39 +905,42 @@ export default function EventsManagement() {
                                 <div className="flex gap-4">
                                     <img src={event.image} alt="" className="h-16 w-16 object-cover rounded-2xl shadow-sm" />
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-start justify-between">
-                                            <div>
-                                                <h3 className="font-bold text-gray-900 truncate leading-tight mb-1">{event.title || '---'}</h3>
-                                                <p className="text-[10px] text-gray-400 uppercase font-black">{event.type}</p>
-                                            </div>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg -mt-1 text-gray-400">
-                                                        <MoreVertical className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="rounded-2xl border-gray-100 p-2 min-w-[160px]">
-                                                    <DropdownMenuItem 
-                                                        className="gap-3 py-3 rounded-xl focus:bg-gray-50 cursor-pointer text-sm font-medium"
-                                                        onClick={() => handleEdit(event)}
-                                                    >
-                                                        <Edit2 className="h-4 w-4 text-gray-400" />
-                                                        {language === 'ar' ? 'تعديل' : 'Edit'}
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem className="gap-3 py-3 rounded-xl focus:bg-gray-50 cursor-pointer text-sm font-medium">
-                                                        <Eye className="h-4 w-4 text-gray-400" />
-                                                        {language === 'ar' ? 'مشاهدة' : 'View'}
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        className="gap-3 py-3 rounded-xl focus:bg-red-50 focus:text-red-600 cursor-pointer text-sm font-medium text-red-600"
-                                                        onClick={() => handleDelete(event._id)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                        {language === 'ar' ? 'حذف' : 'Delete'}
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-bold text-gray-900 truncate leading-tight mb-1">{event.title || '---'}</h3>
+                                            <p className="text-[10px] text-gray-400 uppercase font-black">{event.type}</p>
                                         </div>
+                                        
+                                        <div className="flex items-center gap-2 mt-3">
+                                             <Button 
+                                                 variant="secondary" 
+                                                 size="sm" 
+                                                 className="h-8 px-3 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 border-none font-bold text-xs gap-1"
+                                                 onClick={() => handleEdit(event)}
+                                             >
+                                                 <Edit2 className="h-3.5 w-3.5" />
+                                                 {language === 'ar' ? 'تعديل' : 'Edit'}
+                                             </Button>
+                                             <DropdownMenu>
+                                                 <DropdownMenuTrigger asChild>
+                                                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-gray-50 text-gray-400">
+                                                         <MoreVertical className="h-4 w-4" />
+                                                     </Button>
+                                                 </DropdownMenuTrigger>
+                                                 <DropdownMenuContent align="end" className="rounded-2xl border-gray-100 p-2 min-w-[160px]">
+                                                     <DropdownMenuItem className="gap-3 py-3 rounded-xl focus:bg-gray-50 cursor-pointer text-sm font-medium">
+                                                         <Eye className="h-4 w-4 text-gray-400" />
+                                                         {language === 'ar' ? 'مشاهدة' : 'View'}
+                                                     </DropdownMenuItem>
+                                                     <DropdownMenuItem
+                                                         className="gap-3 py-3 rounded-xl focus:bg-red-50 focus:text-red-600 cursor-pointer text-sm font-medium text-red-600"
+                                                         onClick={() => handleDelete(event._id)}
+                                                     >
+                                                         <Trash2 className="h-4 w-4" />
+                                                         {language === 'ar' ? 'حذف' : 'Delete'}
+                                                     </DropdownMenuItem>
+                                                 </DropdownMenuContent>
+                                             </DropdownMenu>
+                                         </div>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3 text-xs">

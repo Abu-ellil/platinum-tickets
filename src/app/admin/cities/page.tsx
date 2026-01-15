@@ -89,6 +89,7 @@ function CitiesManagementContent() {
     const [venueNameAr, setVenueNameAr] = useState("");
     const [selectedCityId, setSelectedCityId] = useState("");
     const [locationLink, setLocationLink] = useState("");
+    const [venueCategories, setVenueCategories] = useState<Category[]>([]);
     
     // City fields
     const [cityName, setCityName] = useState("");
@@ -137,6 +138,19 @@ function CitiesManagementContent() {
         }
     };
 
+    const addVenueCategory = () => {
+        const newId = `cat-${Date.now()}`;
+        setVenueCategories([...venueCategories, { id: newId, label: "", color: "#3b82f6", defaultPrice: 0 }]);
+    };
+
+    const removeVenueCategory = (id: string) => {
+        setVenueCategories(venueCategories.filter(cat => cat.id !== id));
+    };
+
+    const updateVenueCategory = (id: string, field: keyof Category, value: any) => {
+        setVenueCategories(venueCategories.map(cat => cat.id === id ? { ...cat, [field]: value } : cat));
+    };
+
     const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -171,6 +185,7 @@ function CitiesManagementContent() {
             setVenueNameAr(venue.name.ar);
             setSelectedCityId(venue.cityId?._id);
             setLocationLink(venue.locationLink || "");
+            setVenueCategories(venue.categories || []);
         } else {
             const city = item as City;
             setCityName(city.name.en);
@@ -197,6 +212,7 @@ function CitiesManagementContent() {
         setCityFlag("");
         setImageUrl("");
         setImageFile(null);
+        setVenueCategories([]);
         setEditingItem(null);
     };
 
@@ -225,8 +241,9 @@ function CitiesManagementContent() {
                     name: { ar: venueNameAr, en: venueName },
                     cityId: selectedCityId,
                     image: imageUrl,
+                    locationLink: locationLink,
                     theaterId: "platinum-stage",
-                    categories: [
+                    categories: venueCategories.length > 0 ? venueCategories : [
                         { id: "vip", label: "VIP", color: "#FFD700", defaultPrice: 1000 },
                         { id: "gold", label: "Gold", color: "#C0C0C0", defaultPrice: 750 },
                         { id: "silver", label: "Silver", color: "#CD7F32", defaultPrice: 500 }
@@ -477,6 +494,78 @@ function CitiesManagementContent() {
                                                 placeholder="https://maps.google.com/..."
                                                 className="h-12 bg-gray-50 border-none rounded-xl"
                                             />
+                                        </div>
+
+                                        <div className="pt-4 border-t border-gray-100">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <label className="text-sm font-black text-gray-900">{language === 'ar' ? 'فئات التذاكر' : 'Ticket Categories'}</label>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={addVenueCategory}
+                                                    className="text-blue-600 hover:text-blue-700 text-xs font-bold gap-1"
+                                                >
+                                                    <Plus className="h-3.5 w-3.5" />
+                                                    {language === 'ar' ? 'إضافة فئة' : 'Add Category'}
+                                                </Button>
+                                            </div>
+                                            
+                                            <div className="space-y-3">
+                                                {venueCategories.length === 0 && (
+                                                    <div className="text-center py-6 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
+                                                        <p className="text-xs text-gray-400 font-medium">
+                                                            {language === 'ar' ? 'لا يوجد فئات مضافة بعد' : 'No categories added yet'}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                                {venueCategories.map((cat) => (
+                                                    <div key={cat.id} className="bg-gray-50 p-3 rounded-2xl space-y-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="relative flex-1">
+                                                                <Input
+                                                                    value={cat.label}
+                                                                    onChange={(e) => updateVenueCategory(cat.id, "label", e.target.value)}
+                                                                    placeholder={language === 'ar' ? 'اسم الفئة (مثلاً: VIP)' : 'Label (e.g. VIP)'}
+                                                                    className="h-10 bg-white border-none rounded-xl text-sm pr-10"
+                                                                />
+                                                                <div 
+                                                                    className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-gray-100 shadow-sm"
+                                                                    style={{ backgroundColor: cat.color }}
+                                                                />
+                                                            </div>
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => removeVenueCategory(cat.id)}
+                                                                className="h-10 w-10 text-red-500 hover:bg-red-50 rounded-xl shrink-0"
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex-1">
+                                                                <Input
+                                                                    type="number"
+                                                                    value={cat.defaultPrice}
+                                                                    onChange={(e) => updateVenueCategory(cat.id, "defaultPrice", parseFloat(e.target.value) || 0)}
+                                                                    placeholder={language === 'ar' ? 'السعر الافتراضي' : 'Default Price'}
+                                                                    className="h-10 bg-white border-none rounded-xl text-sm"
+                                                                />
+                                                            </div>
+                                                            <div className="w-24">
+                                                                <Input
+                                                                    type="color"
+                                                                    value={cat.color}
+                                                                    onChange={(e) => updateVenueCategory(cat.id, "color", e.target.value)}
+                                                                    className="h-10 w-full p-1 bg-white border-none rounded-xl cursor-pointer"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     </>
                                 ) : (
