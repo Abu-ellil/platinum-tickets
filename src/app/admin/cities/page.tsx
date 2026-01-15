@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
+import { ARABIC_CURRENCIES } from "@/lib/currencies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -48,6 +49,7 @@ interface City {
     image: string;
     slug: string;
     flag: string;
+    currency: string;
 }
 
 interface Venue {
@@ -98,6 +100,7 @@ function CitiesManagementContent() {
     const [countryNameAr, setCountryNameAr] = useState("");
     const [citySlug, setCitySlug] = useState("");
     const [cityFlag, setCityFlag] = useState("");
+    const [cityCurrency, setCityCurrency] = useState("SAR");
 
     // Shared fields
     const [imageUrl, setImageUrl] = useState("");
@@ -210,6 +213,7 @@ function CitiesManagementContent() {
         setCountryNameAr("");
         setCitySlug("");
         setCityFlag("");
+        setCityCurrency("SAR");
         setImageUrl("");
         setImageFile(null);
         setVenueCategories([]);
@@ -277,7 +281,8 @@ function CitiesManagementContent() {
                     country: { ar: countryNameAr, en: countryName },
                     image: imageUrl,
                     slug: citySlug,
-                    flag: cityFlag
+                    flag: cityFlag,
+                    currency: cityCurrency
                 };
                 
                 const url = (editingItem && 'slug' in editingItem) ? `/api/cities/${editingItem.slug}` : '/api/cities';
@@ -632,6 +637,20 @@ function CitiesManagementContent() {
                                                     placeholder="🇦🇪"
                                                     className="h-12 bg-gray-50 border-none rounded-xl text-center text-xl"
                                                 />
+                                            </div>
+                                            <div>
+                                                <label className="text-sm font-bold text-gray-700 block mb-1.5">{language === 'ar' ? 'العملة' : 'Currency'}</label>
+                                                <select
+                                                    value={cityCurrency}
+                                                    onChange={(e) => setCityCurrency(e.target.value)}
+                                                    className="w-full h-12 bg-gray-50 border-none rounded-xl px-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none appearance-none"
+                                                >
+                                                    {ARABIC_CURRENCIES.map(curr => (
+                                                        <option key={curr.code} value={curr.code}>
+                                                            {curr.flag} {curr.name[language === 'ar' ? 'ar' : 'en']} ({curr.code})
+                                                        </option>
+                                                    ))}
+                                                </select>
                                             </div>
                                         </div>
                                     </>

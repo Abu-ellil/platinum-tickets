@@ -28,9 +28,11 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <LanguageProvider>
-          <MainLayoutWrapper>
-            {children}
-          </MainLayoutWrapper>
+          <CityProvider>
+            <MainLayoutWrapper>
+              {children}
+            </MainLayoutWrapper>
+          </CityProvider>
         </LanguageProvider>
       </body>
     </html>

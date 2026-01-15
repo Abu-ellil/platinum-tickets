@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
+import { ARABIC_CURRENCIES } from "@/lib/currencies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Event, Venue, Artist } from "@/lib/types";
@@ -175,6 +176,12 @@ export default function EventsManagement() {
         setCategoryPrices([]);
 
         if (!cityId) return;
+
+        // Set default currency from city
+        const city = cities.find(c => c._id === cityId);
+        if (city && (city as any).currency) {
+            setCurrency((city as any).currency);
+        }
 
         // Fetch venues for this city
         try {

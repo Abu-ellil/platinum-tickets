@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Star } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
+import { useCity } from "@/lib/city-context";
 import { Event } from "@/lib/types";
 
 interface EventCardProps {
@@ -11,6 +12,7 @@ interface EventCardProps {
 
 export function EventCard({ event }: EventCardProps) {
   const { language } = useLanguage();
+  const { currencySymbol, selectedCity } = useCity();
   
   const title = event.title || '';
   const venueName = (event.venueId && typeof event.venueId === 'object' && 'name' in event.venueId)
@@ -21,6 +23,8 @@ export function EventCard({ event }: EventCardProps) {
   const rating = event.rating || 4.8;
   const badgeText = event.statusBadge || null;
   const showDate = event.showTimes && event.showTimes.length > 0 ? new Date(event.showTimes[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+  const displayCurrency = event.currency || selectedCity?.currency || "SAR";
+  const displayCurrencySymbol = event.currency || currencySymbol;
 
   return (
     <Link href={`/events/${event._id}`} className="group block h-full">
@@ -62,11 +66,11 @@ export function EventCard({ event }: EventCardProps) {
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-primary">
-                  {price} <span className="text-xs font-normal text-gray-400">{event.currency}</span>
+                  {price} <span className="text-xs font-normal text-gray-400">{displayCurrencySymbol}</span>
                 </span>
                 {event.originalPrice && event.originalPrice > price && (
                   <span className="text-xs text-gray-400 line-through">
-                    {event.originalPrice} {event.currency}
+                    {event.originalPrice} {displayCurrencySymbol}
                   </span>
                 )}
               </div>
