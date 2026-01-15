@@ -8,7 +8,7 @@ import { useLanguage } from '@/lib/language-context';
 
 export default function OTPPage() {
   const { language, dir } = useLanguage();
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otp, setOtp] = useState(['', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(300);
 
@@ -30,7 +30,7 @@ export default function OTPPage() {
     newOtp[index] = value.slice(-1);
     setOtp(newOtp);
 
-    if (value && index < 5) {
+    if (value && index < 4) {
       const nextInput = document.getElementById(`otp-${index + 1}`) as HTMLInputElement;
       nextInput?.focus();
     }
@@ -97,7 +97,7 @@ export default function OTPPage() {
               {isAr ? 'أدخل رمز التحقق' : 'Enter Verification Code'}
             </h2>
             <p className="text-gray-500 text-sm">
-              {isAr ? 'أدخل الرمز المكون من 6 أرقام المرسل إلى هاتفك' : 'Enter the 6-digit code sent to your phone'}
+              {isAr ? 'أدخل الرمز المكون من 5 أرقام المرسل إلى هاتفك' : 'Enter the 5-digit code sent to your phone'}
             </p>
           </div>
 
@@ -128,9 +128,9 @@ export default function OTPPage() {
 
           <Button
             onClick={handleVerify}
-            disabled={otp.join('').length !== 6 || isLoading}
+            disabled={otp.join('').length !== 5 || isLoading}
             className={`w-full h-12 text-lg font-bold rounded-xl transition-all duration-200 ${
-              otp.join('').length === 6 && !isLoading
+              otp.join('').length === 5 && !isLoading
                 ? 'bg-[#1A162E] text-white hover:bg-[#2a244a] shadow-lg shadow-gray-200'
                 : 'bg-[#F1F3F5] text-gray-400 cursor-not-allowed'
             }`}
