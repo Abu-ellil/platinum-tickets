@@ -25,6 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/lib/language-context";
+import { useCity } from "@/lib/city-context";
 import { Event, Artist } from "@/lib/types";
 
 interface City {
@@ -73,6 +74,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 export default function CityPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { language, dir, t } = useLanguage();
+  const { setSelectedCity } = useCity();
   const citySlug = (id as string).toLowerCase();
 
   const [city, setCity] = useState<City | null>(null);
@@ -94,6 +96,7 @@ export default function CityPage({ params }: { params: Promise<{ id: string }> }
         if (cityJson.success) {
           const cityData = cityJson.data;
           setCity(cityData);
+          setSelectedCity(cityData);
 
           // 2. Fetch Events for this city
           const eventsRes = await fetch(`/api/events?cityId=${cityData._id}`);

@@ -3,27 +3,16 @@
 import Link from "next/link";
 import { Globe, MapPin, User } from "lucide-react";
 import styles from "./SiteHeader.module.css";
-import { useEffect, useState } from "react";
+import { useCity } from "@/lib/city-context";
+import { useLanguage } from "@/lib/language-context";
 
 export function SiteHeader() {
-  const [userCity, setUserCity] = useState<string>("...");
+  const { selectedCity } = useCity();
+  const { language } = useLanguage();
 
-  useEffect(() => {
-    const fetchCity = async () => {
-      try {
-        const response = await fetch("https://ipapi.co/json/");
-        const data = await response.json();
-        if (data.city) {
-          setUserCity(data.city);
-        } else {
-          setUserCity("الدوحة"); // Default for Doha as shown in screenshot
-        }
-      } catch (error) {
-        setUserCity("الدوحة");
-      }
-    };
-    fetchCity();
-  }, []);
+  const cityName = selectedCity 
+    ? selectedCity.name[language] 
+    : (language === "ar" ? "الدوحة" : "Doha");
 
   return (
     <header className={styles.siteHeader}>
@@ -32,7 +21,7 @@ export function SiteHeader() {
           <User size={20} className={styles.userIcon} />
         </div>
         <div className={styles.citySelector}>
-          <span className={styles.cityName}>{userCity}</span>
+          <span className={styles.cityName}>{cityName}</span>
           <MapPin size={18} className={styles.pinIcon} />
         </div>
       </div>

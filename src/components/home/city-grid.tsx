@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/language-context";
+import { useCity } from "@/lib/city-context";
 
 interface City {
   _id: string;
@@ -18,6 +19,7 @@ interface City {
 
 export function CityGrid() {
   const { language, t } = useLanguage();
+  const { setSelectedCity } = useCity();
   const [showAll, setShowAll] = useState(false);
   const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +69,12 @@ export function CityGrid() {
       </h2>
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {displayedCities.map((city) => (
-          <Link key={city._id} href={`/city/${city.slug}`} className="group block">
+          <Link 
+            key={city._id} 
+            href={`/city/${city.slug}`} 
+            className="group block"
+            onClick={() => setSelectedCity(city as any)}
+          >
             <div className="relative aspect-[16/10] rounded-[24px] overflow-hidden mb-4 shadow-sm group-hover:shadow-xl transition-all duration-300">
               <img
                 src={city.image}
