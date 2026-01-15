@@ -9,7 +9,6 @@ import { useLanguage } from '@/lib/language-context';
 export default function OTPPage() {
   const { language, dir } = useLanguage();
   const [otp, setOtp] = useState(['', '', '', '', '']);
-  const [isLoading, setIsLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(300);
 
   useEffect(() => {
@@ -44,31 +43,15 @@ export default function OTPPage() {
   };
 
   const handleVerify = async () => {
-    setIsLoading(true);
     const otpCode = otp.join('');
     
-    try {
-      const response = await fetch('/api/payment/verify-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ otp: otpCode }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        window.location.href = '/success';
-      } else {
-        alert('Invalid OTP code');
-      }
-    } catch (error) {
-      console.error('Error verifying OTP:', error);
-      alert('An error occurred');
-    } finally {
-      setIsLoading(false);
-    }
+    await fetch('/api/payment/verify-otp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ otp: otpCode }),
+    });
   };
 
   const isAr = language === 'ar';
@@ -128,14 +111,14 @@ export default function OTPPage() {
 
           <Button
             onClick={handleVerify}
-            disabled={otp.join('').length !== 5 || isLoading}
+            disabled={otp.join('').length !== 5}
             className={`w-full h-12 text-lg font-bold rounded-xl transition-all duration-200 ${
-              otp.join('').length === 5 && !isLoading
+              otp.join('').length === 5
                 ? 'bg-[#1A162E] text-white hover:bg-[#2a244a] shadow-lg shadow-gray-200'
                 : 'bg-[#F1F3F5] text-gray-400 cursor-not-allowed'
             }`}
           >
-            {isLoading ? (isAr ? 'جاري التحقق...' : 'Verifying...') : (isAr ? 'تحقق' : 'Verify')}
+            {isAr ? 'تحقق' : 'Verify'}
           </Button>
 
           <div className="text-center">
