@@ -12,6 +12,7 @@ export interface ICity extends Document {
   image: string;
   slug: string;
   flag: string;
+  currency: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,6 +30,7 @@ const CitySchema = new Schema<ICity>(
     image: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
     flag: { type: String, required: true },
+    currency: { type: String, required: true, default: 'SAR' },
   },
   { timestamps: true }
 );
