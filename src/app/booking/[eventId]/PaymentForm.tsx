@@ -1,12 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, CreditCard, Clock, CheckCircle2, ShieldCheck, MessageCircle, Info, ChevronDown } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Clock, ShieldCheck, MessageCircle, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useLanguage } from '@/lib/language-context';
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
 import Image from 'next/image';
 import { Event } from '@/lib/types';
 
@@ -26,6 +30,7 @@ interface PaymentFormProps {
 export default function PaymentForm({ event, selectedSeats, onBack, totalAmount }: PaymentFormProps) {
   const { language, dir } = useLanguage();
   const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
+  const [showTimeoutModal, setShowTimeoutModal] = useState(false);
   const [saveCard, setSaveCard] = useState(true);
   const [whatsappReminder, setWhatsappReminder] = useState(true);
   const [refundGuarantee, setRefundGuarantee] = useState(true);
@@ -48,11 +53,20 @@ console.log("event",event)
 
 
   useEffect(() => {
+    if (showTimeoutModal) return;
+
     const timer = setInterval(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setShowTimeoutModal(true);
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [showTimeoutModal]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -412,6 +426,32 @@ console.log("event",event)
           </div>
         </div>
       </footer>
+
+      {/* Timeout Modal */}
+      <Dialog open={showTimeoutModal} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-[400px] p-8 rounded-[32px] border-none shadow-2xl [&>button]:hidden">
+          <div className="flex flex-col items-center text-center space-y-6">
+            <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center">
+              <Clock className="w-8 h-8 text-gray-400" />
+            </div>
+            
+            <div className="space-y-3">
+              <p className="text-[17px] font-medium leading-relaxed text-gray-900 px-4">
+                {isAr 
+                  ? "لقد كنت غائبًا لفترة. قم بإعادة تحميل الصفحة للاستمرار." 
+                  : "You've been away for a while. Please reload the page to continue."}
+              </p>
+            </div>
+
+            <Button 
+              onClick={() => window.location.reload()}
+              className="w-full h-14 bg-[#1A162E] hover:bg-[#2a244a] text-white text-lg font-bold rounded-2xl transition-all duration-200 shadow-lg shadow-gray-200"
+            >
+              {isAr ? 'تحديث' : 'Refresh'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

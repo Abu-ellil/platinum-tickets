@@ -1,8 +1,13 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { HelpCircle, Ticket, ChevronRight, Globe } from 'lucide-react';
-import Link from 'next/link';
+import { HelpCircle, Ticket, ChevronRight, Clock } from 'lucide-react';
+import { useLanguage } from '@/lib/language-context';
+import {
+    Dialog,
+    DialogContent,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import styles from './TheaterLayout.module.css';
 import overlayImageFile from './overlay.png';
 
@@ -41,6 +46,7 @@ interface TheaterLayoutProps {
   title?: string;
   subtitle?: string;
   currency?: string;
+  pricing?: { categoryId: string; price: number }[];
   onBack?: () => void;
   onContinue?: (selectedSeats: {
     sectionId: number;
@@ -56,11 +62,31 @@ export default function TheaterLayout({
   title = "Theater Layout",
   subtitle,
   currency = "SAR",
+  pricing,
   onBack,
   onContinue,
 }: TheaterLayoutProps) {
   // Embedded Data
-  const sections: Section[] = [
+
+  const globalSeatSize = 18;
+  const overlayImage = typeof overlayImageFile === 'string' ? overlayImageFile : overlayImageFile.src;
+
+  const { language, dir } = useLanguage();
+
+  // State for selected seats
+  const [selectedSeats, setSelectedSeats] = useState<{
+    sectionId: number;
+    rowName: string;
+    seatNumber: number;
+    price: number;
+    sectionName: string;
+  }[]>([]);
+
+  const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutes in seconds
+  const [showTimeoutModal, setShowTimeoutModal] = useState(false);
+
+  const sections: Section[] = React.useMemo(() => {
+    const rawSections: Section[] = [
   {
     "id": 1768347722025,
     "name": "VIP",
@@ -3007,31 +3033,38 @@ export default function TheaterLayout({
       }
     ]
   }
-];
-  const globalSeatSize = 18;
-  const overlayImage = typeof overlayImageFile === 'string' ? overlayImageFile : overlayImageFile.src;
+    ];
 
-  // State for selected seats
-  const [selectedSeats, setSelectedSeats] = useState<{
-    sectionId: number;
-    rowName: string;
-    seatNumber: number;
-    price: number;
-    sectionName: string;
-  }[]>([]);
+    if (!pricing || pricing.length === 0) return rawSections;
 
-  const [timeLeft, setTimeLeft] = useState(15 * 60); // 15 minutes in seconds
+    return rawSections.map(section => {
+      // Find matching price from pricing prop
+      // Match section name (e.g. \"VIP\") with pricing categoryId (e.g. \"vip\")
+      const dynamicPrice = pricing.find(p => 
+        p.categoryId.toLowerCase() === section.name.trim().toLowerCase()
+      );
+
+      if (dynamicPrice) {
+        return {
+          ...section,
+          price: dynamicPrice.price
+        };
+      }
+      return section;
+    });
+  }, [pricing]);
 
   React.useEffect(() => {
-    if (selectedSeats.length === 0) {
-      setTimeLeft(15 * 60);
+    if (selectedSeats.length === 0 || showTimeoutModal) {
+      if (selectedSeats.length === 0) setTimeLeft(15 * 60);
       return;
     }
 
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
-        if (prev <= 0) {
+        if (prev <= 1) {
           clearInterval(timer);
+          setShowTimeoutModal(true);
           return 0;
         }
         return prev - 1;
@@ -3039,7 +3072,7 @@ export default function TheaterLayout({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [selectedSeats.length]);
+  }, [selectedSeats.length, showTimeoutModal]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -3409,6 +3442,32 @@ export default function TheaterLayout({
                   </div>
               )}
           </div>
+
+          {/* Timeout Modal */}
+          <Dialog open={showTimeoutModal} onOpenChange={() => {}}>
+              <DialogContent className="sm:max-w-[400px] p-8 rounded-[32px] border-none shadow-2xl [&>button]:hidden">
+                  <div className="flex flex-col items-center text-center space-y-6">
+                      <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center">
+                          <Clock className="w-8 h-8 text-gray-400" />
+                      </div>
+                      
+                      <div className="space-y-3">
+                          <p className="text-[17px] font-medium leading-relaxed text-gray-900 px-4">
+                              {language === 'ar' 
+                                  ? "لقد كنت غائبًا لفترة. قم بإعادة تحميل الصفحة للاستمرار." 
+                                  : "You've been away for a while. Please reload the page to continue."}
+                          </p>
+                      </div>
+
+                      <Button 
+                          onClick={() => window.location.reload()}
+                          className="w-full h-14 bg-[#1A162E] hover:bg-[#2a244a] text-white text-lg font-bold rounded-2xl transition-all duration-200 shadow-lg shadow-gray-200"
+                      >
+                          {language === 'ar' ? 'تحديث' : 'Refresh'}
+                      </Button>
+                  </div>
+              </DialogContent>
+          </Dialog>
       </div>
   );
 }

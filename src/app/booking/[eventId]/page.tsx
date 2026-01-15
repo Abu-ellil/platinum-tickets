@@ -70,6 +70,7 @@ export default function BookingPage({ params }: { params: Promise<{ eventId: str
         title={event.title}
         subtitle={`${(event.venueId && typeof event.venueId === 'object' && 'name' in event.venueId) ? event.venueId.name[language as keyof typeof event.venueId.name] : (event.venueName || "")} • ${event.showTimes?.[0]?.date ? new Date(event.showTimes[0].date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US') : ''}`}
         currency={event.currency || 'SAR'}
+        pricing={event.pricing}
         onContinue={(seats) => {
           setSelectedSeats(seats.map(s => ({
             sectionId: Number(s.sectionId),
