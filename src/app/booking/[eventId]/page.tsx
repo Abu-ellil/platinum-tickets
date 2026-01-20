@@ -100,7 +100,11 @@ export default function BookingPage({ params }: { params: { eventId: string } })
                 </div>
               </div>
 
-              <Button size="lg" className="w-full text-lg font-bold">
+              <Button 
+                size="lg" 
+                className="w-full text-lg font-bold"
+                onClick={() => router.push(`/booking/${params.eventId}/payment`)}
+              >
                 متابعة للدفع
               </Button>
             </div>
