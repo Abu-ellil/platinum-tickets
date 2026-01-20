@@ -11,6 +11,7 @@ const cairo = Cairo({
 import { LanguageProvider } from "@/lib/language-context";
 import { CityProvider } from "@/lib/city-context";
 import { MainLayoutWrapper } from "@/components/main-layout-wrapper";
+import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "Platinumlist - Event Tickets, Attractions & Concerts",
@@ -33,6 +34,7 @@ export default function RootLayout({
           <CityProvider>
             <MainLayoutWrapper>{children}</MainLayoutWrapper>
           </CityProvider>
+          <Toaster position="top-center" richColors />
         </LanguageProvider>
       </body>
     </html>
