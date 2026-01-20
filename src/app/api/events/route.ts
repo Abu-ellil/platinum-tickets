@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
   if (status !== 'all') query.status = status;
   
   const events = await Event.find(query)
-    .populate('venueId', 'name image')
-    .populate('cityId', 'name')
+    .populate({ path: 'venueId', model: Venue, select: 'name image' })
+    .populate({ path: 'cityId', model: City, select: 'name' })
     .sort({ createdAt: -1 })
     .limit(limit)
     .lean();
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating event:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to create event' },
+      { success: false, error: error instanceof Error ? error.message : 'Failed to create event' },
       { status: 500 }
     );
   }

@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 declare global {
-  // eslint-disable-next-line no-var
+   
   var mongoose: {
     conn: mongoose.Connection | null;
     promise: Promise<mongoose.Connection> | null;
@@ -23,7 +23,7 @@ async function dbConnect(): Promise<mongoose.Connection> {
     );
   }
 
-  if (cached!.conn) {
+  if (cached!.conn && cached!.conn.readyState === 1) {
     return cached!.conn;
   }
 

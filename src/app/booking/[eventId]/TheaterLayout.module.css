@@ -1,0 +1,352 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 65px); /* Adjust height to account for global SiteHeader */
+  background: white;
+  font-family: 'Cairo', system-ui, sans-serif;
+  overflow: hidden;
+  direction: ltr;
+}
+
+.siteHeader {
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: white;
+  border-bottom: 1px solid #f1f5f9;
+  direction: ltr;
+}
+
+.languageSelector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.logoContainer {
+  display: flex;
+  align-items: center;
+}
+
+.logoContainer a {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logoImage {
+  height: 28px;
+  width: auto;
+  cursor: pointer;
+}
+
+.header {
+  padding: 12px 20px;
+  background: white;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  direction: rtl;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.backButton {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1e293b;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.2s ease;
+}
+
+.backButton:hover {
+  background: #f1f5f9;
+}
+
+.headerInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.eventTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  background: #f8fafc;
+  padding: 6px 20px;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+}
+
+.eventSubtitle {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.headerAction {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.2s ease;
+}
+
+.headerAction:hover {
+  background: #f1f5f9;
+}
+
+.canvas { flex: 1;
+  position: relative;
+  background: white;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.content {
+  transform-origin: 0 0;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.stage {
+  user-select: none;
+  pointer-events: none;
+}
+
+.section {
+  position: absolute;
+  border-radius: 10px;
+  padding: 12px 15px;
+  transition: transform 0.3s ease;
+}
+
+.sectionOverview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.05);
+  border: 1px dashed #ccc;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.seat {
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.footer {
+  background: transparent;
+  border-top: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  z-index: 20;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.priceContainer {
+  width: 100%;
+  overflow: hidden;
+  padding: 10px 0 20px 0;
+  pointer-events: auto;
+}
+
+.summaryBar {
+  width: 100%;
+  background: white;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.08);
+  pointer-events: auto;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.nextButton {
+  background: #1a1a2e;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.nextButton:hover {
+  background: #2a2a4a;
+}
+
+.nextButton:active {
+  transform: scale(0.96);
+}
+
+.timerBadge {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.nextText {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.totalInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.detailsRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.seatCount {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #f59e0b;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.ticketIcon {
+  transform: rotate(-45deg);
+}
+
+.detailsLink {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #666;
+  cursor: pointer;
+}
+
+.detailsText {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.detailsIcon {
+  color: #999;
+}
+
+.totalRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  direction: ltr;
+}
+
+.totalAmount {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1a1a2e;
+}
+
+.currencyLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.totalLabel {
+  font-size: 16px;
+  font-weight: 600;
+  color: #666;
+  margin-left: 4px;
+}
+
+.priceScroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 10px;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.priceScroll::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.priceChip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: white;
+  padding: 12px 24px;
+  border-radius: 40px;
+  white-space: nowrap;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: grab;
+}
+
+.priceChip:hover {
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.08);
+}
+
+.priceChip:active {
+  cursor: grabbing;
+  transform: scale(0.95);
+}
+
+.priceText {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.priceDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}

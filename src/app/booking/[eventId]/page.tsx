@@ -1,51 +1,51 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useEffect, use } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ChevronRight, ArrowLeft } from "lucide-react";
+import { ChevronRight, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PlatinumStageMap } from "@/components/platinum-stage-map";
-import { getTheaterConfig } from "@/lib/theater-data";
-import { EVENTS } from "@/lib/data";
-import { Seat, Theater } from "@/lib/types";
+import TheaterLayout from "./TheaterLayout";
+import PaymentForm from "./PaymentForm";
+import { useLanguage } from "@/lib/language-context";
+import { useCity } from "@/lib/city-context";
+import { Event } from "@/lib/types";
 
-// Helper to find seat price/details by ID
-const findSeatInTheater = (theater: Theater, seatId: string) => {
-  for (const section of theater.sections) {
-    for (const row of section.rows) {
-      const seat = row.seats.find(s => s.id === seatId);
-      if (seat) return seat;
-    }
-  }
-  return null;
-};
+export default function BookingPage({ params }: { params: Promise<{ eventId: string }> }) {
+  const { eventId } = use(params);
+  const { language, dir } = useLanguage();
+  const { currencySymbol, selectedCity } = useCity();
+  const [selectedSeats, setSelectedSeats] = useState<{
+    sectionId: number;
+    rowName: string;
+    seatNumber: number;
+    price: number;
+    sectionName: string;
+  }[]>([]);
+  const [showSummary, setShowSummary] = useState(false);
+  const [event, setEvent] = useState<Event | null>(null);
+  const [loading, setLoading] = useState(true);
 
-export default function BookingPage({ params }: { params: { eventId: string } }) {
-  const router = useRouter();
-  const [selectedSeatIds, setSelectedSeatIds] = useState<string[]>([]);
-
-  const event = EVENTS.find(e => e.id === params.eventId) || EVENTS[0];
-  const { theater, categories } = useMemo(() => getTheaterConfig(params.eventId), [params.eventId]);
-
-  const toggleSeat = useCallback((seat: Seat) => {
-    if (seat.status !== 'available') return;
-
-    setSelectedSeatIds(prev => {
-      if (prev.includes(seat.id)) {
-        return prev.filter(id => id !== seat.id);
-      } else {
-        return [...prev, seat.id];
+  useEffect(() => {
+    const fetchEvent = async () => {
+      try {
+        const res = await fetch(`/api/events/${eventId}`);
+        const data = await res.json();
+        if (data.success) {
+          setEvent(data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch event:", error);
+      } finally {
+        setLoading(false);
       }
-    });
-  }, []);
+    };
+
+    fetchEvent();
+  }, [eventId]);
 
   const totalAmount = useMemo(() => {
-    return selectedSeatIds.reduce((sum, id) => {
-      const seat = findSeatInTheater(theater, id);
-      return sum + (seat?.price || 0);
-    }, 0);
-  }, [selectedSeatIds, theater]);
+    return selectedSeats.reduce((sum, seat) => sum + seat.price, 0);
+  }, [selectedSeats]);
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
@@ -100,11 +100,7 @@ export default function BookingPage({ params }: { params: { eventId: string } })
                 </div>
               </div>
 
-              <Button 
-                size="lg" 
-                className="w-full text-lg font-bold"
-                onClick={() => router.push(`/booking/${params.eventId}/payment`)}
-              >
+              <Button size="lg" className="w-full text-lg font-bold">
                 متابعة للدفع
               </Button>
             </div>
@@ -115,6 +111,36 @@ export default function BookingPage({ params }: { params: { eventId: string } })
           )}
         </div>
       </div>
-    </div>
+    );
+  }
+
+  if (!showSummary) {
+    return (
+      <TheaterLayout
+        title={event.title}
+        subtitle={`${(event.venueId && typeof event.venueId === 'object' && 'name' in event.venueId) ? event.venueId.name[language as keyof typeof event.venueId.name] : (event.venueName || "")} • ${event.showTimes?.[0]?.date ? new Date(event.showTimes[0].date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US') : ''}`}
+        currency={displayCurrency}
+        pricing={event.pricing}
+        onContinue={(seats) => {
+          setSelectedSeats(seats.map(s => ({
+            sectionId: Number(s.sectionId),
+            rowName: s.rowName,
+            seatNumber: Number(s.seatNumber),
+            price: s.price,
+            sectionName: s.sectionName
+          })));
+          setShowSummary(true);
+        }}
+      />
+    );
+  }
+
+  return (
+    <PaymentForm
+      event={event}
+      selectedSeats={selectedSeats}
+      onBack={() => setShowSummary(false)}
+      totalAmount={totalAmount}
+    />
   );
 }

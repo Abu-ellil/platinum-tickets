@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { 
   Facebook, 
   Twitter, 
@@ -122,10 +123,15 @@ const footerLinks = {
 export function Footer() {
   const { language, setLanguage, dir } = useLanguage();
   const t = (key: keyof typeof translations["en"]) => translations[language][key];
+  const pathname = usePathname();
+  const isEventPage = pathname?.startsWith("/events/");
   const links = footerLinks[language];
 
   return (
-    <footer className="bg-white pt-10 pb-12 font-sans overflow-hidden border-t border-gray-100">
+    <footer className={cn(
+      "bg-white pt-10 font-sans overflow-hidden border-t border-gray-100",
+      isEventPage ? "pb-40" : "pb-12"
+    )}>
       <div className="container mx-auto px-6 max-w-4xl text-right">
         
         {/* Top Tagline */}

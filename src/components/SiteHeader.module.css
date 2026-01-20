@@ -1,0 +1,63 @@
+.siteHeader {
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: white;
+  border-bottom: 1px solid #f1f5f9;
+  direction: ltr; /* Layout logic is LTR, content inside uses RTL for Arabic text */
+}
+
+.leftSection {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.rightSection {
+  display: flex;
+  align-items: center;
+}
+
+.userProfile {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.citySelector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  direction: rtl; /* City name and Pin icon in Arabic direction */
+}
+
+.cityName {
+  color: #475569;
+  font-weight: 600;
+}
+
+.pinIcon {
+  color: #94a3b8;
+}
+
+.logoLink {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.logoImage {
+  height: 28px;
+  width: auto;
+}

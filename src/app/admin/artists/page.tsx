@@ -66,7 +66,7 @@ export default function ArtistsManagement() {
 
     const handleDelete = (id: string) => {
         if (confirm(language === "ar" ? "هل أنت متأكد من حذف هذا المشهور؟" : "Are you sure you want to delete this artist?")) {
-            setArtists(artists.filter(a => a.id !== id));
+            setArtists(artists.filter(a => a._id !== id));
         }
     };
 

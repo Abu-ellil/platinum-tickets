@@ -11,36 +11,33 @@ interface IPricing {
 }
 
 export interface IEvent extends Document {
-  title: {
-    ar: string;
-    en: string;
-  };
-  venueId: Types.ObjectId;
+  title: string;
+  venueId?: Types.ObjectId;
+  venueName?: string;
+  description?: string;
   cityId: Types.ObjectId;
   showTimes: IShowTime[];
   pricing: IPricing[];
   image: string;
+  images?: string[];
+  video?: string;
   currency: 'QAR' | 'SAR' | 'EGP' | 'AED' | 'BHD' | 'OMR' | 'MAD' | 'TRY';
   status: 'active' | 'soldOut' | 'cancelled' | 'draft';
-  type: 'concert' | 'theater' | 'adventure' | 'festival' | 'comedy' | 'attraction' | 'sports';
+  type: 'concert' | 'theater' | 'adventure' | 'festival' | 'comedy' | 'attraction' | 'sports' | 'music' | 'cinema' | 'adventures';
   featured: boolean;
   rating?: number;
   originalPrice?: number;
-  statusBadge?: {
-    ar: string;
-    en: string;
-  };
+  statusBadge?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
 const EventSchema = new Schema<IEvent>(
   {
-    title: {
-      ar: { type: String, required: true },
-      en: { type: String },
-    },
-    venueId: { type: Schema.Types.ObjectId, ref: 'Venue', required: true },
+    title: { type: String, required: true },
+    venueId: { type: Schema.Types.ObjectId, ref: 'Venue', required: false },
+    venueName: { type: String },
+    description: { type: String },
     cityId: { type: Schema.Types.ObjectId, ref: 'City', required: true },
     showTimes: [{
       date: { type: Date, required: true },
@@ -51,6 +48,8 @@ const EventSchema = new Schema<IEvent>(
       price: { type: Number, required: true },
     }],
     image: { type: String, required: true },
+    images: [{ type: String }],
+    video: { type: String },
     currency: { 
       type: String, 
       enum: ['QAR', 'SAR', 'EGP', 'AED', 'BHD', 'OMR', 'MAD', 'TRY'],
@@ -63,16 +62,13 @@ const EventSchema = new Schema<IEvent>(
     },
     type: {
       type: String,
-      enum: ['concert', 'theater', 'adventure', 'festival', 'comedy', 'attraction', 'sports'],
+      enum: ['concert', 'theater', 'adventure', 'festival', 'comedy', 'attraction', 'sports', 'music', 'cinema', 'adventures'],
       default: 'concert',
     },
     featured: { type: Boolean, default: false },
     rating: { type: Number, default: 4.5 },
     originalPrice: { type: Number },
-    statusBadge: {
-      ar: { type: String },
-      en: { type: String },
-    },
+    statusBadge: { type: String },
   },
   { timestamps: true }
 );

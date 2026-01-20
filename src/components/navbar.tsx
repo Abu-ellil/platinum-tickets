@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Menu, Search, UserRound, Globe, Ticket, ChevronLeft, ChevronRight, X, Phone, Users, MapPin, BadgeDollarSign, MoreHorizontal, LayoutDashboard } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Menu, Search, UserRound, Globe, Ticket, ChevronLeft, ChevronRight, X, Phone, Users, MapPin, BadgeDollarSign, MoreHorizontal, LayoutDashboard, Loader2, Check } from "lucide-react";
 import { FaUser } from "react-icons/fa";
 
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/language-context";
+import { useCity } from "@/lib/city-context";
 import {
   Sheet,
   SheetContent,
@@ -27,31 +29,13 @@ const NAV_LINKS = [
 ];
 
 export function Navbar() {
+  const pathname = usePathname();
   const { language, setLanguage, t, dir } = useLanguage();
+  const { selectedCity, cities, loading: cityLoading, currencySymbol, setSelectedCity } = useCity();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [userCity, setUserCity] = useState<string>("...");
+  const [isCitySheetOpen, setIsCitySheetOpen] = useState(false);
 
-  useEffect(() => {
-    // Fetch user location based on IP
-    const fetchCity = async () => {
-      try {
-        const response = await fetch("https://ipapi.co/json/");
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        if (data.city) {
-          setUserCity(data.city);
-        }
-      } catch (error) {
-        // Log error only in development if needed, but handle gracefully for user
-        console.warn("Location fetch failed, using default:", error);
-        setUserCity("Dubai"); // Fallback
-      }
-    };
-
-    fetchCity();
-  }, []);
+  const isHomePage = pathname === "/";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -65,6 +49,8 @@ export function Navbar() {
   const toggleLanguage = () => {
     setLanguage(language === "ar" ? "en" : "ar");
   };
+
+  if (!isHomePage) return null;
 
   return (
     <header
@@ -86,11 +72,72 @@ export function Navbar() {
           </Link>
 
           {/* Desktop City Selector */}
-          <div className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full border border-white/20 cursor-pointer transition-all group/city">
+          <div
+            onClick={() => setIsCitySheetOpen(true)}
+            className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full border border-white/20 cursor-pointer transition-all group/city"
+          >
             <MapPin className="w-4 h-4 text-white/70 group-hover/city:text-white" />
-            <span className="text-white font-bold text-sm tracking-tight">{userCity}</span>
+            {cityLoading ? (
+              <Loader2 className="w-4 h-4 text-white/70 animate-spin" />
+            ) : (
+              <span className="text-white font-bold text-sm tracking-tight">
+                {selectedCity ? (language === 'ar' ? selectedCity.name.ar : selectedCity.name.en) : "..."}
+              </span>
+            )}
             <ChevronRight className="w-4 h-4 text-white/50 group-hover/city:text-white rotate-90" />
           </div>
+
+          {/* City Selection Sheet */}
+          <Sheet open={isCitySheetOpen} onOpenChange={setIsCitySheetOpen}>
+            <SheetContent side={language === "ar" ? "right" : "left"} className="bg-white p-0 w-full sm:max-w-md border-none">
+              <SheetHeader className="p-6 border-b">
+                <SheetTitle className="text-xl font-black">
+                  {language === 'ar' ? 'اختر مدينتك' : 'Select Your City'}
+                </SheetTitle>
+              </SheetHeader>
+              <div className="p-4 space-y-2 overflow-y-auto max-h-[70vh]">
+                {cityLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                  </div>
+                ) : cities.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    {language === 'ar' ? 'لا توجد مدن متاحة' : 'No cities available'}
+                  </div>
+                ) : (
+                  cities.map((city) => (
+                    <button
+                      key={city._id}
+                      onClick={() => {
+                        setSelectedCity(city);
+                        setIsCitySheetOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all ${
+                        selectedCity?._id === city._id
+                          ? "bg-blue-50 border-2 border-blue-500"
+                          : "bg-gray-50 hover:bg-gray-100 border-2 border-transparent"
+                      }`}
+                    >
+                      <span className="text-2xl">{city.flag}</span>
+                      <div className="flex-1 text-right">
+                        <div className="font-bold text-gray-900">
+                          {language === 'ar' ? city.name.ar : city.name.en}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {language === 'ar' ? city.country.ar : city.country.en}
+                        </div>
+                      </div>
+                      {selectedCity?._id === city._id && (
+                        <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center">
+                          <Check className="w-4 h-4 text-white" />
+                        </div>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
         {/* RIGHT SIDE: Logo */}
         <div className="flex items-center gap-1 p-1 rounded-full transition-colors bg-white/20 backdrop-blur-md border border-white/20">
@@ -148,14 +195,21 @@ export function Navbar() {
                   </div>
 
                   <div className="mt-6 border-t pt-6 px-2 space-y-1">
-                    <div className="flex items-center justify-between px-4 py-4 text-gray-600">
-                      <span className="text-lg">{t("location")}: <span className="text-gray-900 font-bold">{userCity}</span></span>
-                    </div>
+                    <button
+                      onClick={() => setIsCitySheetOpen(true)}
+                      className="w-full flex items-center justify-between px-4 py-4 text-gray-600 hover:bg-gray-50 rounded-xl"
+                    >
+                      <span className="text-lg">{t("location")}: <span className="text-gray-900 font-bold flex items-center gap-1">
+                        {selectedCity?.flag} {language === 'ar' ? selectedCity?.name.ar : selectedCity?.name.en}
+                      </span></span>
+                    </button>
                     <div onClick={toggleLanguage} className="flex items-center justify-between px-4 py-4 text-gray-600 cursor-pointer hover:bg-gray-50 rounded-xl">
                       <span className="text-lg">{t("language")}: <span className="text-gray-900 font-bold uppercase">{language}</span></span>
                     </div>
                     <div className="flex items-center justify-between px-4 py-4 text-gray-600">
-                      <span className="text-lg">{t("currency")}: <span className="text-gray-900 font-bold">EUR</span></span>
+                      <span className="text-lg">{t("currency")}: <span className="text-gray-900 font-bold flex items-center gap-1">
+                        {selectedCity?.flag} {currencySymbol}
+                      </span></span>
                     </div>
                   </div>
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Venue from '@/models/Venue';
+import City from '@/models/City';
 
 // GET /api/venues/[id] - Get a single venue
 export async function GET(
@@ -11,7 +12,7 @@ export async function GET(
     await dbConnect();
     const { id } = await params;
     
-    const venue = await Venue.findById(id).populate('cityId', 'name');
+    const venue = await Venue.findById(id).populate({ path: 'cityId', model: City, select: 'name' });
     
     if (!venue) {
       return NextResponse.json(

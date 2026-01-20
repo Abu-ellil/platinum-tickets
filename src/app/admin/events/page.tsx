@@ -12,19 +12,25 @@ import {
     Trash2,
     Calendar,
     MapPin,
+    Home,
     Eye,
     Upload,
     X,
     Clock,
+    Tag,
     DollarSign,
     Image as ImageIcon,
+    Video,
     Check,
-    Loader2
+    Loader2,
+    Star
 } from "lucide-react";
 
 import { uploadToCloudinary } from "@/lib/cloudinary-upload";
+import { ARABIC_CURRENCIES } from "@/lib/currencies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Event, Venue, Artist } from "@/lib/types";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -45,6 +51,30 @@ interface ShowTime {
     time: string;
 }
 
+interface Category {
+    _id: string;
+    name: {
+        ar: string;
+        en: string;
+    };
+    id: string;
+    label: {
+        ar: string;
+        en: string;
+    };
+    slug: string;
+    color: string;
+    defaultPrice: number;
+}
+
+interface City {
+    _id: string;
+    name: {
+        ar: string;
+        en: string;
+    };
+}
+
 interface CategoryPrice {
     categoryId: string;
     label: string;
@@ -52,52 +82,55 @@ interface CategoryPrice {
     color: string;
 }
 
-interface IEvent {
-    _id: string;
-    title: { ar: string; en: string };
-    date: string;
-    venueId: { _id: string; name: { ar: string; en: string } };
-    cityId: { _id: string; name: { ar: string; en: string } };
-    image: string;
-    pricing: { price: number }[];
-    currency: string;
-    status: string;
-    type: string;
-    showTimes: { date: string }[];
-}
+const STANDARD_CATEGORIES = [
+    { label: "VIP", color: "#ef4444" },
+    { label: "ROYAL", color: "#8b5cf6" },
+    { label: "PLATINUM", color: "#94a3b8" },
+    { label: "DIAMOND", color: "#3b82f6" },
+    { label: "GOLD", color: "#f59e0b" },
+    { label: "SILVER", color: "#cbd5e1" },
+    { label: "BRONZE", color: "#b45309" }
+];
 
 export default function EventsManagement() {
     const { language, dir } = useLanguage();
     const searchParams = useSearchParams();
-    const [events, setEvents] = useState<IEvent[]>([]);
+    const [events, setEvents] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
-    const [isAddOpen, setIsAddOpen] = useState(searchParams.get("add") === "true");
-
     // Data for dropdowns
-    const [cities, setCities] = useState<any[]>([]);
-    const [apiVenues, setApiVenues] = useState<any[]>([]);
-    const [loadingVenues, setLoadingVenues] = useState(false);
+    const [cities, setCities] = useState<City[]>([]);
+    const [venues, setVenues] = useState<Venue[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [isAddOpen, setIsAddOpen] = useState(searchParams.get("add") === "true");
 
     // Form state
     const [selectedCity, setSelectedCity] = useState("");
     const [selectedVenue, setSelectedVenue] = useState("");
+    const [venueInput, setVenueInput] = useState("");
+    const [eventDescription, setEventDescription] = useState("");
+    const [eventType, setEventType] = useState("concert");
     const [eventTitle, setEventTitle] = useState("");
-    const [eventTitleAr, setEventTitleAr] = useState("");
     const [showTimes, setShowTimes] = useState<ShowTime[]>([{ id: "1", date: "", time: "" }]);
     const [categoryPrices, setCategoryPrices] = useState<CategoryPrice[]>([]);
+    const [editingEvent, setEditingEvent] = useState<Event | null>(null);
     const [imageUrl, setImageUrl] = useState("");
-    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [images, setImages] = useState<string[]>([]);
+    const [videoUrl, setVideoUrl] = useState("");
     const [isUploading, setIsUploading] = useState(false);
+    const [isVideoUploading, setIsVideoUploading] = useState(false);
     const [currency, setCurrency] = useState("EGP");
     const [isSaving, setIsSaving] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const multiImagesRef = useRef<HTMLInputElement>(null);
+    const videoInputRef = useRef<HTMLInputElement>(null);
 
     // Initial Fetch
     useEffect(() => {
         fetchEvents();
         fetchCities();
+        fetchCategories();
     }, []);
 
     const fetchEvents = async () => {
@@ -127,50 +160,112 @@ export default function EventsManagement() {
         }
     };
 
-    // When city changes, fetch venues for that city
-    const handleCityChange = async (cityId: string) => {
-        setSelectedCity(cityId);
-        setSelectedVenue("");
-        setCategoryPrices([]);
-        setApiVenues([]);
-
-        if (!cityId) return;
-
+    const fetchCategories = async () => {
         try {
-            setLoadingVenues(true);
-            const res = await fetch(`/api/venues?cityId=${cityId}`);
+            const res = await fetch('/api/categories');
             const json = await res.json();
             if (json.success) {
-                setApiVenues(json.data);
+                setCategories(json.data);
             }
         } catch (error) {
-            console.error("Failed to fetch venues:", error);
-        } finally {
-            setLoadingVenues(false);
+            console.error("Failed to fetch categories:", error);
         }
     };
 
-    // When venue changes, try to load category config
-    const handleVenueChange = (venueId: string) => {
-        setSelectedVenue(venueId);
+    // When city changes
+    const handleCityChange = async (cityId: string) => {
+        setSelectedCity(cityId);
+        setSelectedVenue("");
+        setVenueInput("");
+        setEventDescription("");
+        setVenues([]);
+        setCategoryPrices([]);
 
-        // Find the selected venue object from API list
-        const selectedApiVenue = apiVenues.find(v => v._id === venueId);
+        if (!cityId) return;
 
-        if (selectedApiVenue && selectedApiVenue.categories && selectedApiVenue.categories.length > 0) {
-            // Use categories from DB venue
-            const prices: CategoryPrice[] = selectedApiVenue.categories.map((cat: any) => ({
-                categoryId: cat.id,
-                label: cat.label,
-                price: cat.defaultPrice,
-                color: cat.color,
-            }));
-            setCategoryPrices(prices);
-        } else {
-            // Fallback if no categories found
-            console.warn("No categories found for venue:", selectedApiVenue?.name?.en || venueId);
-            setCategoryPrices([]);
+        // Set default currency from city
+        const city = cities.find(c => c._id === cityId);
+        if (city && (city as any).currency) {
+            setCurrency((city as any).currency);
         }
+
+        // Fetch venues for this city
+        try {
+            const res = await fetch(`/api/venues?cityId=${cityId}`);
+            const json = await res.json();
+            if (json.success) {
+                setVenues(json.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch venues:", error);
+        }
+    };
+
+    const handleEdit = async (event: Event) => {
+        setEditingEvent(event);
+        setEventTitle(event.title);
+        const cityId = typeof event.cityId === 'object' ? event.cityId._id : event.cityId;
+        setSelectedCity(cityId);
+        
+        // Fetch venues for this city first
+        try {
+            const res = await fetch(`/api/venues?cityId=${cityId}`);
+            const json = await res.json();
+            if (json.success) {
+                setVenues(json.data);
+                
+                // After venues are loaded, set the selected venue
+                const vObj = typeof event.venueId === 'object' ? event.venueId : null;
+                const vId = vObj ? vObj._id : (typeof event.venueId === 'string' ? event.venueId : null);
+                
+                if (vId) {
+                    setSelectedVenue(vId);
+                    if (vObj) {
+                        setVenueInput(vObj.name?.[language as keyof typeof vObj.name] || vObj.name?.en || "");
+                    }
+                    
+                    const venue = json.data.find((v: Venue) => v._id === vId);
+                    if (venue && venue.categories) {
+                        setCategoryPrices(venue.categories.map((cat: any) => {
+                            const catLabel = typeof cat.label === 'string' ? cat.label : (language === 'ar' ? cat.label.ar : cat.label.en);
+                            const eventPrice = event.pricing?.find((p: { categoryId: string; price: number }) => 
+                                p.categoryId === cat.id || p.categoryId.toLowerCase() === catLabel.toLowerCase()
+                            );
+                            return {
+                                categoryId: cat.id,
+                                label: catLabel,
+                                price: eventPrice ? eventPrice.price : (cat.defaultPrice || 0),
+                                color: cat.color || '#3b82f6'
+                            };
+                        }));
+                    }
+                } else {
+                    setVenueInput(event.venueName || "");
+                    setCategoryPrices([]);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to fetch venues during edit:", error);
+        }
+
+        setEventDescription(event.description || "");
+        setEventType(event.type);
+        setCurrency(event.currency || "EGP");
+        setImageUrl(event.image);
+        setImages(event.images || []);
+        setVideoUrl(event.video || "");
+        
+        if (event.showTimes && event.showTimes.length > 0) {
+            setShowTimes(event.showTimes.map((st: { date: string | Date; time: string }, idx: number) => ({
+                id: idx.toString(),
+                date: new Date(st.date).toISOString().split('T')[0],
+                time: st.time || new Date(st.date).toTimeString().split(' ')[0].substring(0, 5)
+            })));
+        } else {
+            setShowTimes([{ id: "1", date: "", time: "" }]);
+        }
+        
+        setIsAddOpen(true);
     };
 
     // Add show time
@@ -191,10 +286,40 @@ export default function EventsManagement() {
     };
 
     // Update category price
-    const updateCategoryPrice = (categoryId: string, price: number) => {
+    const updateCategoryPrice = (categoryId: string, field: "price" | "label", value: any) => {
         setCategoryPrices(categoryPrices.map(cp =>
-            cp.categoryId === categoryId ? { ...cp, price } : cp
+            cp.categoryId === categoryId ? { ...cp, [field]: value } : cp
         ));
+    };
+
+    const addCategoryPrice = () => {
+        const newId = `cat-${Date.now()}`;
+        setCategoryPrices([...categoryPrices, {
+            categoryId: newId,
+            label: "",
+            price: 0,
+            color: '#3b82f6'
+        }]);
+    };
+
+    const removeCategoryPrice = (categoryId: string) => {
+        setCategoryPrices(categoryPrices.filter(cp => cp.categoryId !== categoryId));
+    };
+
+    const addStandardCategories = () => {
+        const existingLabels = categoryPrices.map(cp => cp.label.toUpperCase());
+        const newCategories = STANDARD_CATEGORIES
+            .filter(sc => !existingLabels.includes(sc.label))
+            .map(sc => ({
+                categoryId: `std-${sc.label.toLowerCase()}-${Date.now()}`,
+                label: sc.label,
+                price: 0,
+                color: sc.color
+            }));
+        
+        if (newCategories.length > 0) {
+            setCategoryPrices([...categoryPrices, ...newCategories]);
+        }
     };
 
     // Handle image selection
@@ -202,7 +327,6 @@ export default function EventsManagement() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        setImageFile(file);
         // Create local preview URL
         const previewUrl = URL.createObjectURL(file);
         setImageUrl(previewUrl);
@@ -223,24 +347,98 @@ export default function EventsManagement() {
         }
     };
 
+    const handleMultipleImagesSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        setIsUploading(true);
+        try {
+            const newUploadedImages: string[] = [];
+            for (let i = 0; i < files.length; i++) {
+                const result = await uploadToCloudinary(files[i]);
+                if (result.secure_url) {
+                    newUploadedImages.push(result.secure_url);
+                }
+            }
+            setImages(prev => [...prev, ...newUploadedImages]);
+            
+            // If main image is empty, set it to the first uploaded image
+            if (!imageUrl && newUploadedImages.length > 0) {
+                setImageUrl(newUploadedImages[0]);
+            }
+        } catch (error) {
+            console.error("Multiple upload failed:", error);
+            alert(language === 'ar' ? "فشل رفع بعض الصور" : "Failed to upload some images");
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handleVideoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Basic check for video type
+        if (!file.type.startsWith('video/')) {
+            alert(language === 'ar' ? "يرجى اختيار ملف فيديو صالح" : "Please select a valid video file");
+            return;
+        }
+
+        setIsVideoUploading(true);
+        try {
+            const result = await uploadToCloudinary(file);
+            if (result.secure_url) {
+                setVideoUrl(result.secure_url);
+            }
+        } catch (error) {
+            console.error("Video upload failed:", error);
+            alert(language === 'ar' ? "فشل رفع الفيديو" : "Video upload failed");
+        } finally {
+            setIsVideoUploading(false);
+        }
+    };
+
+    const removeImage = (index: number) => {
+        setImages(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const removeVideo = () => {
+        setVideoUrl("");
+    };
+
     // Reset form
     const resetForm = () => {
+        setEditingEvent(null);
         setSelectedCity("");
         setSelectedVenue("");
+        setVenueInput("");
+        setEventDescription("");
+        setVenues([]);
+        setEventType("concert");
         setEventTitle("");
-        setEventTitleAr("");
         setShowTimes([{ id: "1", date: "", time: "" }]);
-        setCategoryPrices([]);
+        // Initialize with standard categories by default for new events
+        setCategoryPrices(STANDARD_CATEGORIES.map(sc => ({
+            categoryId: `std-${sc.label.toLowerCase()}-${Date.now()}`,
+            label: sc.label,
+            price: 0,
+            color: sc.color
+        })));
         setImageUrl("");
-        setImageFile(null);
+        setImages([]);
+        setVideoUrl("");
         setCurrency("EGP");
-        setApiVenues([]);
     };
 
     // Save event
     const handleSaveEvent = async () => {
         if (!imageUrl) {
             alert(language === 'ar' ? "يرجى رفع صورة للفعالية" : "Please upload an event image");
+            return;
+        }
+
+        if (!venueInput && !selectedVenue) {
+            alert(language === 'ar' ? "يرجى ادخال مكان الفعالية" : "Please enter an event venue");
             return;
         }
 
@@ -253,36 +451,44 @@ export default function EventsManagement() {
         try {
             // Construct payload 
             const payload = {
-                title: {
-                    ar: eventTitleAr || eventTitle,
-                    en: eventTitle || eventTitleAr
-                },
-                venueId: selectedVenue, // Now a valid ObjectId from API
-                cityId: selectedCity,   // Now a valid ObjectId from API
+                title: eventTitle,
+                cityId: selectedCity,
+                venueId: selectedVenue || undefined,
+                venueName: !selectedVenue ? venueInput : undefined,
+                description: eventDescription,
                 showTimes: showTimes.map(st => ({
                     date: new Date(`${st.date}T${st.time}`),
                     time: st.time
                 })),
                 pricing: categoryPrices.map(cp => ({
-                    categoryId: cp.categoryId,
+                    categoryId: cp.label || cp.categoryId, // Use label for matching theater sections
                     price: cp.price
                 })),
-                image: imageUrl || "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=800",
+                image: imageUrl || (images.length > 0 ? images[0] : "https://images.unsplash.com/photo-1493225255756-d9584f8606e9?w=800"),
+                images: images,
+                video: videoUrl,
                 currency: currency,
                 status: 'active',
-                type: 'concert',
+                type: eventType,
                 featured: false,
             };
 
-            const res = await fetch('/api/events', {
-                method: 'POST',
+            const url = editingEvent ? `/api/events/${editingEvent._id}` : '/api/events';
+            const method = editingEvent ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method: method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
             const data = await res.json();
             if (data.success) {
-                setEvents([data.data, ...events]);
+                if (editingEvent) {
+                    setEvents(events.map(e => e._id === editingEvent._id ? data.data : e));
+                } else {
+                    setEvents([data.data, ...events]);
+                }
                 resetForm();
                 setIsAddOpen(false);
             } else {
@@ -303,20 +509,34 @@ export default function EventsManagement() {
             setEvents(events.filter(e => e._id !== id));
 
             try {
-                console.warn("DELETE not persisted to DB yet (endpoint missing)");
-                // Placeholder for delete API call
-                // await fetch(`/api/events/${id}`, { method: 'DELETE' });
+                const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (!data.success) {
+                    throw new Error(data.error);
+                }
             } catch (e) {
                 setEvents(oldEvents);
-                alert("Failed to delete");
+                alert("Failed to delete: " + (e instanceof Error ? e.message : "Unknown error"));
             }
         }
     };
 
-    const filteredEvents = events.filter(event =>
-        (event.title?.[language] || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (event.venueId?.name?.[language] || "").toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredEvents = events.filter(event => {
+        const titleMatch = (event.title || "").toLowerCase().includes(searchTerm.toLowerCase());
+        
+        const venueName = typeof event.venueId === 'object' && event.venueId !== null 
+            ? (event.venueId.name?.[language as keyof typeof event.venueId.name] || event.venueId.name?.en || "") 
+            : (event.venueName || "");
+            
+        const cityName = typeof event.cityId === 'object' && event.cityId !== null
+            ? (event.cityId.name?.[language as keyof typeof event.cityId.name] || event.cityId.name?.en || "")
+            : "";
+            
+        const venueMatch = venueName.toLowerCase().includes(searchTerm.toLowerCase());
+        const cityMatch = cityName.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        return titleMatch || venueMatch || cityMatch;
+    });
 
     return (
         <div className="space-y-6 md:space-y-8">
@@ -348,115 +568,225 @@ export default function EventsManagement() {
 
                             <div className="flex-1 overflow-y-auto p-6 space-y-6">
                                 {/* Image Upload */}
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <ImageIcon className="h-4 w-4" />
-                                        {language === 'ar' ? 'صورة الفعالية' : 'Event Image'}
-                                    </label>
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        onChange={handleImageSelect}
-                                        accept="image/*"
-                                        className="hidden"
-                                    />
-                                    {imageUrl ? (
-                                        <div className="relative aspect-video rounded-2xl overflow-hidden group">
-                                            <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                                                <Button
-                                                    variant="secondary"
-                                                    size="sm"
-                                                    onClick={() => fileInputRef.current?.click()}
-                                                    className="rounded-xl"
-                                                >
-                                                    {language === 'ar' ? 'تغيير' : 'Change'}
-                                                </Button>
-                                                {isUploading && (
-                                                    <div className="flex items-center gap-2 text-white">
-                                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                                        <span className="text-sm">Uploading...</span>
-                                                    </div>
-                                                )}
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                            <ImageIcon className="h-4 w-4" />
+                                            {language === 'ar' ? 'الصورة الرئيسية' : 'Main Image'}
+                                        </label>
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={handleImageSelect}
+                                            accept="image/*"
+                                            className="hidden"
+                                        />
+                                        {imageUrl ? (
+                                            <div className="relative aspect-video rounded-2xl overflow-hidden group">
+                                                <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                                    <Button
+                                                        variant="secondary"
+                                                        size="sm"
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        className="rounded-xl"
+                                                    >
+                                                        {language === 'ar' ? 'تغيير' : 'Change'}
+                                                    </Button>
+                                                </div>
                                             </div>
+                                        ) : (
+                                            <div
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="aspect-video bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50 transition-all cursor-pointer"
+                                            >
+                                                <Upload className="h-8 w-8 mb-2" />
+                                                <span className="text-xs font-bold">{language === 'ar' ? 'اضغط لرفع الصورة' : 'Click to upload image'}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Multiple Images */}
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                            <ImageIcon className="h-4 w-4" />
+                                            {language === 'ar' ? 'صور إضافية' : 'Additional Images'}
+                                        </label>
+                                        <input
+                                            type="file"
+                                            ref={multiImagesRef}
+                                            onChange={handleMultipleImagesSelect}
+                                            accept="image/*"
+                                            multiple
+                                            className="hidden"
+                                        />
+                                        <div className="grid grid-cols-4 gap-2">
+                                            {images.map((img, idx) => (
+                                                <div key={idx} className="relative aspect-square rounded-xl overflow-hidden group">
+                                                    <img src={img} alt={`Preview ${idx}`} className="w-full h-full object-cover" />
+                                                    <button
+                                                        onClick={() => removeImage(idx)}
+                                                        className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            <button
+                                                onClick={() => multiImagesRef.current?.click()}
+                                                className="aspect-square rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center hover:border-blue-400 hover:bg-blue-50 transition-all text-gray-400 hover:text-blue-600"
+                                            >
+                                                <Plus className="h-6 w-6" />
+                                            </button>
                                         </div>
-                                    ) : (
-                                        <div
-                                            onClick={() => fileInputRef.current?.click()}
-                                            className="aspect-video bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center text-gray-400 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50 transition-all cursor-pointer"
-                                        >
-                                            <Upload className="h-8 w-8 mb-2" />
-                                            <span className="text-xs font-bold">{language === 'ar' ? 'اضغط لرفع الصورة' : 'Click to upload image'}</span>
+                                    </div>
+
+                                    {/* Video Upload */}
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                            <Video className="h-4 w-4" />
+                                            {language === 'ar' ? 'فيديو الفعالية' : 'Event Video'}
+                                        </label>
+                                        <input
+                                            type="file"
+                                            ref={videoInputRef}
+                                            onChange={handleVideoSelect}
+                                            accept="video/*"
+                                            className="hidden"
+                                        />
+                                        {videoUrl ? (
+                                            <div className="relative aspect-video rounded-2xl overflow-hidden group bg-black">
+                                                <video src={videoUrl} className="w-full h-full object-contain" controls />
+                                                <button
+                                                    onClick={removeVideo}
+                                                    className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div
+                                                onClick={() => videoInputRef.current?.click()}
+                                                className={`w-full h-20 rounded-2xl border-2 border-dashed border-gray-200 flex items-center justify-center gap-3 transition-all cursor-pointer ${isVideoUploading ? 'bg-blue-50' : 'bg-gray-50 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50'}`}
+                                            >
+                                                {isVideoUploading ? (
+                                                    <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                                                ) : (
+                                                    <Upload className="h-6 w-6 text-gray-400" />
+                                                )}
+                                                <span className="text-sm font-bold text-gray-400">
+                                                    {isVideoUploading 
+                                                        ? (language === 'ar' ? 'جاري الرفع...' : 'Uploading...') 
+                                                        : (language === 'ar' ? 'رفع فيديو' : 'Upload Video')}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    {(isUploading || isVideoUploading) && (
+                                        <div className="flex items-center gap-2 text-blue-600 bg-blue-50 p-3 rounded-xl animate-pulse">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            <span className="text-sm font-medium">
+                                                {language === 'ar' ? 'جاري رفع الملفات...' : 'Uploading files...'}
+                                            </span>
                                         </div>
                                     )}
                                 </div>
 
                                 {/* City Selection */}
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                        <MapPin className="h-4 w-4" />
-                                        {language === 'ar' ? 'المدينة' : 'City'}
-                                    </label>
-                                    <select
-                                        value={selectedCity}
-                                        onChange={(e) => handleCityChange(e.target.value)}
-                                        className="flex h-12 w-full items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 border-none"
-                                    >
-                                        <option value="">{language === 'ar' ? 'اختر المدينة...' : 'Select city...'}</option>
-                                        {cities.map(city => (
-                                            <option key={city._id} value={city._id}>
-                                                {language === 'ar' ? (city.name?.ar || '---') : (city.name?.en || '---')}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Venue Selection */}
-                                {selectedCity && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
                                             <MapPin className="h-4 w-4" />
-                                            {language === 'ar' ? 'المسرح / القاعة' : 'Venue / Theater'}
+                                            {language === 'ar' ? 'المدينة' : 'City'}
                                         </label>
                                         <select
-                                            value={selectedVenue}
-                                            onChange={(e) => handleVenueChange(e.target.value)}
-                                            disabled={loadingVenues}
-                                            className="flex h-12 w-full items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 border-none disabled:opacity-50"
+                                            value={selectedCity}
+                                            onChange={(e) => handleCityChange(e.target.value)}
+                                            className="flex h-12 w-full items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 border-none"
                                         >
-                                            <option value="">
-                                                {loadingVenues
-                                                    ? (language === 'ar' ? 'جار التحميل...' : 'Loading...')
-                                                    : (language === 'ar' ? 'اختر المسرح...' : 'Select venue...')}
-                                            </option>
-                                            {apiVenues.map(venue => (
-                                                <option key={venue._id} value={venue._id}>
-                                                    {language === 'ar' ? (venue.name?.ar || '---') : (venue.name?.en || '---')}
+                                            <option value="">{language === 'ar' ? 'اختر المدينة...' : 'Select city...'}</option>
+                                            {cities.map(city => (
+                                                <option key={city._id} value={city._id}>
+                                                    {language === 'ar' ? (city.name?.ar || '---') : (city.name?.en || '---')}
                                                 </option>
                                             ))}
                                         </select>
                                     </div>
-                                )}
+
+                                    <div className="space-y-2 sm:col-span-2">
+                                        <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                            <Home className="h-4 w-4" />
+                                            {language === 'ar' ? 'المكان' : 'Venue'}
+                                        </label>
+                                        <input
+                                            list="venues-list"
+                                            value={venueInput}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setVenueInput(val);
+                                                const venue = venues.find(v => v.name.en === val || v.name.ar === val);
+                                                if (venue) {
+                                                    setSelectedVenue(venue._id);
+                                                    if (venue.categories) {
+                                                        setCategoryPrices(venue.categories.map((cat: { id: string; label: string | { ar: string; en: string }; defaultPrice: number; color: string }) => ({
+                                                            categoryId: cat.id,
+                                                            label: typeof cat.label === 'string' ? cat.label : (language === 'ar' ? cat.label.ar : cat.label.en),
+                                                            price: cat.defaultPrice || 0,
+                                                            color: cat.color || '#3b82f6'
+                                                        })));
+                                                    }
+                                                } else {
+                                                    setSelectedVenue("");
+                                                }
+                                            }}
+                                            disabled={!selectedCity}
+                                            placeholder={language === 'ar' ? 'اكتب اسم المكان...' : 'Type venue name...'}
+                                            className="flex h-12 w-full items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 border-none disabled:opacity-50"
+                                        />
+                                        <datalist id="venues-list">
+                                            {venues.map(venue => (
+                                                <option key={venue._id} value={language === 'ar' ? venue.name.ar : venue.name.en} />
+                                            ))}
+                                        </datalist>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                            <Tag className="h-4 w-4" />
+                                            {language === 'ar' ? 'نوع الفعالية' : 'Event Type'}
+                                        </label>
+                                        <select
+                                            value={eventType}
+                                            onChange={(e) => setEventType(e.target.value)}
+                                            className="flex h-12 w-full items-center justify-between rounded-xl bg-gray-50 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 border-none"
+                                        >
+                                            {categories.map(cat => (
+                                                <option key={cat._id} value={cat.slug}>
+                                                    {language === 'ar' ? cat.label?.ar : cat.label?.en}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
 
                                 {/* Event Title */}
                                 <div className="grid grid-cols-1 gap-4">
                                     <div>
-                                        <label className="text-sm font-bold text-gray-700 block mb-1.5">{language === 'ar' ? 'اسم الفعالية (عربي)' : 'Event Title (Arabic)'}</label>
-                                        <Input
-                                            value={eventTitleAr}
-                                            onChange={(e) => setEventTitleAr(e.target.value)}
-                                            placeholder="حفلة تامر حسني"
-                                            className="h-12 bg-gray-50 border-none rounded-xl"
-                                            dir="rtl"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-sm font-bold text-gray-700 block mb-1.5">{language === 'ar' ? 'اسم الفعالية (إنجليزي)' : 'Event Title (English)'}</label>
+                                        <label className="text-sm font-bold text-gray-700 block mb-1.5">{language === 'ar' ? 'اسم الفعالية' : 'Event Title'}</label>
                                         <Input
                                             value={eventTitle}
                                             onChange={(e) => setEventTitle(e.target.value)}
-                                            placeholder="Tamer Hosny Concert"
+                                            placeholder={language === 'ar' ? 'اسم الفعالية...' : 'Event Title...'}
                                             className="h-12 bg-gray-50 border-none rounded-xl"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="text-sm font-bold text-gray-700 block mb-1.5">{language === 'ar' ? 'وصف الفعالية' : 'Event Description'}</label>
+                                        <textarea
+                                            value={eventDescription}
+                                            onChange={(e) => setEventDescription(e.target.value)}
+                                            placeholder={language === 'ar' ? 'وصف الفعالية هنا...' : 'Event description here...'}
+                                            className="w-full min-h-[120px] p-4 bg-gray-50 border-none rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                                         />
                                     </div>
                                 </div>
@@ -479,7 +809,7 @@ export default function EventsManagement() {
                                             {language === 'ar' ? 'إضافة وقت' : 'Add Time'}
                                         </Button>
                                     </div>
-                                    {showTimes.map((st, index) => (
+                                    {showTimes.map((st) => (
                                         <div key={st.id} className="flex gap-2 items-center">
                                             <Input
                                                 type="date"
@@ -509,51 +839,92 @@ export default function EventsManagement() {
                                 </div>
 
                                 {/* Category Pricing */}
-                                {categoryPrices.length > 0 && (
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
-                                                <DollarSign className="h-4 w-4" />
-                                                {language === 'ar' ? 'أسعار التذاكر' : 'Ticket Prices'}
-                                            </label>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                            <DollarSign className="h-4 w-4" />
+                                            {language === 'ar' ? 'أسعار التذاكر' : 'Ticket Prices'}
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={addStandardCategories}
+                                                className="text-indigo-600 hover:text-indigo-700 text-[10px] md:text-xs border border-indigo-100 rounded-lg px-2"
+                                            >
+                                                <Star className="h-3 w-3 mr-1" />
+                                                {language === 'ar' ? 'الفئات الأساسية' : 'Standard Categories'}
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={addCategoryPrice}
+                                                className="text-blue-600 hover:text-blue-700 text-[10px] md:text-xs"
+                                            >
+                                                <Plus className="h-4 w-4 mr-1" />
+                                                {language === 'ar' ? 'إضافة فئة' : 'Add Category'}
+                                            </Button>
                                             <select
                                                 value={currency}
                                                 onChange={(e) => setCurrency(e.target.value)}
                                                 className="h-9 px-3 rounded-lg bg-gray-100 text-sm font-medium"
                                             >
-                                                <option value="EGP">EGP</option>
-                                                <option value="SAR">SAR</option>
-                                                <option value="AED">AED</option>
-                                                <option value="QAR">QAR</option>
-                                                <option value="BHD">BHD</option>
+                                                {ARABIC_CURRENCIES.map(curr => (
+                                                    <option key={curr.code} value={curr.code}>
+                                                        {curr.code} - {curr.name[language === 'ar' ? 'ar' : 'en']}
+                                                    </option>
+                                                ))}
                                             </select>
                                         </div>
-                                        <div className="space-y-2">
-                                            {categoryPrices.map(cp => (
-                                                <div key={cp.categoryId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                                                    <span
-                                                        className="w-4 h-4 rounded-sm shrink-0"
-                                                        style={{ backgroundColor: cp.color }}
-                                                    />
-                                                    <span className="text-sm font-medium text-gray-700 flex-1">{cp.label}</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {categoryPrices.length === 0 && (
+                                            <p className="text-xs text-gray-400 italic text-center py-4 bg-gray-50 rounded-xl border-2 border-dashed">
+                                                {language === 'ar' ? 'لم يتم العثور على فئات. أضف فئة يدوياً.' : 'No categories found. Add one manually.'}
+                                            </p>
+                                        )}
+                                        {categoryPrices.map(cp => (
+                                            <div key={cp.categoryId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                                                <span
+                                                    className="w-4 h-4 rounded-sm shrink-0"
+                                                    style={{ backgroundColor: cp.color }}
+                                                />
+                                                <Input
+                                                    value={cp.label}
+                                                    onChange={(e) => updateCategoryPrice(cp.categoryId, "label", e.target.value)}
+                                                    placeholder={language === 'ar' ? 'اسم الفئة (مثل: VIP)' : 'Category label (e.g. VIP)'}
+                                                    className="h-9 flex-1 bg-white border border-gray-200 rounded-lg text-sm"
+                                                />
+                                                <div className="flex items-center gap-2">
                                                     <Input
                                                         type="number"
                                                         value={cp.price}
-                                                        onChange={(e) => updateCategoryPrice(cp.categoryId, parseFloat(e.target.value) || 0)}
-                                                        className="h-9 w-28 bg-white border border-gray-200 rounded-lg text-right"
+                                                        onChange={(e) => updateCategoryPrice(cp.categoryId, "price", parseFloat(e.target.value) || 0)}
+                                                        className="h-9 w-24 bg-white border border-gray-200 rounded-lg text-right text-sm"
                                                     />
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => removeCategoryPrice(cp.categoryId)}
+                                                        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
                                                 </div>
-                                            ))}
-                                        </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                )}
+                                </div>
                             </div>
 
                             <div className="p-6 border-t bg-gray-50/50 space-y-3">
                                 <Button
                                     className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-100 gap-2"
                                     onClick={handleSaveEvent}
-                                    disabled={!selectedVenue || !eventTitleAr || isUploading || isSaving}
+                                    disabled={!selectedCity || !eventTitle || isUploading || isSaving}
                                 >
                                     {isUploading || isSaving ? (
                                         <>
@@ -619,7 +990,7 @@ export default function EventsManagement() {
                                             <div className="flex items-center gap-4">
                                                 <img src={event.image} alt="" className="h-10 w-16 object-cover rounded-xl shadow-sm" />
                                                 <div className="min-w-0">
-                                                    <p className="font-bold text-gray-900 truncate max-w-[200px]">{event.title?.[language] || '---'}</p>
+                                                    <p className="font-bold text-gray-900 truncate max-w-[200px]">{event.title || '---'}</p>
                                                     <p className="text-[10px] text-gray-400 uppercase font-black">{event.type}</p>
                                                 </div>
                                             </div>
@@ -637,7 +1008,11 @@ export default function EventsManagement() {
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2 text-gray-600">
                                                 <MapPin className="h-4 w-4" />
-                                                <span className="text-sm truncate max-w-[150px]">{event.venueId?.name?.[language]}</span>
+                                                <span className="text-sm truncate max-w-[150px]">
+                                                    {typeof event.venueId === 'object' && event.venueId !== null 
+                                                        ? (event.venueId.name?.[language as keyof typeof event.venueId.name] || event.venueId.name?.en || '---')
+                                                        : (event.venueName || '---')}
+                                                </span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 font-bold text-gray-900">
@@ -653,7 +1028,12 @@ export default function EventsManagement() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-1">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-blue-50 hover:text-blue-600">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-8 w-8 rounded-full hover:bg-blue-50 hover:text-blue-600"
+                                                    onClick={() => handleEdit(event)}
+                                                >
                                                     <Edit2 className="h-4 w-4" />
                                                 </Button>
                                                 <Button
@@ -685,36 +1065,42 @@ export default function EventsManagement() {
                                 <div className="flex gap-4">
                                     <img src={event.image} alt="" className="h-16 w-16 object-cover rounded-2xl shadow-sm" />
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-start justify-between">
-                                            <div>
-                                                <h3 className="font-bold text-gray-900 truncate leading-tight mb-1">{event.title?.[language] || '---'}</h3>
-                                                <p className="text-[10px] text-gray-400 uppercase font-black">{event.type}</p>
-                                            </div>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg -mt-1 text-gray-400">
-                                                        <MoreVertical className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="rounded-2xl border-gray-100 p-2 min-w-[160px]">
-                                                    <DropdownMenuItem className="gap-3 py-3 rounded-xl focus:bg-gray-50 cursor-pointer text-sm font-medium">
-                                                        <Edit2 className="h-4 w-4 text-gray-400" />
-                                                        {language === 'ar' ? 'تعديل' : 'Edit'}
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem className="gap-3 py-3 rounded-xl focus:bg-gray-50 cursor-pointer text-sm font-medium">
-                                                        <Eye className="h-4 w-4 text-gray-400" />
-                                                        {language === 'ar' ? 'مشاهدة' : 'View'}
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        className="gap-3 py-3 rounded-xl focus:bg-red-50 focus:text-red-600 cursor-pointer text-sm font-medium text-red-600"
-                                                        onClick={() => handleDelete(event._id)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                        {language === 'ar' ? 'حذف' : 'Delete'}
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-bold text-gray-900 truncate leading-tight mb-1">{event.title || '---'}</h3>
+                                            <p className="text-[10px] text-gray-400 uppercase font-black">{event.type}</p>
                                         </div>
+                                        
+                                        <div className="flex items-center gap-2 mt-3">
+                                             <Button 
+                                                 variant="secondary" 
+                                                 size="sm" 
+                                                 className="h-8 px-3 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 border-none font-bold text-xs gap-1"
+                                                 onClick={() => handleEdit(event)}
+                                             >
+                                                 <Edit2 className="h-3.5 w-3.5" />
+                                                 {language === 'ar' ? 'تعديل' : 'Edit'}
+                                             </Button>
+                                             <DropdownMenu>
+                                                 <DropdownMenuTrigger asChild>
+                                                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl bg-gray-50 text-gray-400">
+                                                         <MoreVertical className="h-4 w-4" />
+                                                     </Button>
+                                                 </DropdownMenuTrigger>
+                                                 <DropdownMenuContent align="end" className="rounded-2xl border-gray-100 p-2 min-w-[160px]">
+                                                     <DropdownMenuItem className="gap-3 py-3 rounded-xl focus:bg-gray-50 cursor-pointer text-sm font-medium">
+                                                         <Eye className="h-4 w-4 text-gray-400" />
+                                                         {language === 'ar' ? 'مشاهدة' : 'View'}
+                                                     </DropdownMenuItem>
+                                                     <DropdownMenuItem
+                                                         className="gap-3 py-3 rounded-xl focus:bg-red-50 focus:text-red-600 cursor-pointer text-sm font-medium text-red-600"
+                                                         onClick={() => handleDelete(event._id)}
+                                                     >
+                                                         <Trash2 className="h-4 w-4" />
+                                                         {language === 'ar' ? 'حذف' : 'Delete'}
+                                                     </DropdownMenuItem>
+                                                 </DropdownMenuContent>
+                                             </DropdownMenu>
+                                         </div>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3 text-xs">
@@ -728,7 +1114,11 @@ export default function EventsManagement() {
                                     </div>
                                     <div className="flex items-center gap-2 text-gray-500 bg-gray-50 p-2 rounded-xl">
                                         <MapPin className="h-3 w-3" />
-                                        <span className="truncate">{event.venueId?.name?.[language]}</span>
+                                        <span className="truncate">
+                                            {typeof event.venueId === 'object' && event.venueId !== null 
+                                                ? (event.venueId.name?.[language as keyof typeof event.venueId.name] || event.venueId.name?.en || '---')
+                                                : (event.venueName || '---')}
+                                        </span>
                                     </div>
                                 </div>
                                 <div className="flex items-center justify-between pt-2">

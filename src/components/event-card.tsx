@@ -3,50 +3,8 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, MapPin, Star } from "lucide-react";
 import { useLanguage } from "@/lib/language-context";
-
-interface Venue {
-  _id: string;
-  name: {
-    ar: string;
-    en: string;
-  };
-}
-
-interface City {
-  _id: string;
-  name: {
-    ar: string;
-    en: string;
-  };
-}
-
-interface Event {
-  _id: string;
-  title: {
-    ar: string;
-    en: string;
-  };
-  image: string;
-  venueId?: Venue;
-  cityId?: City;
-  pricing: {
-    categoryId: string;
-    price: number;
-  }[];
-  currency: string;
-  rating?: number;
-  originalPrice?: number;
-  statusBadge?: {
-    ar: string;
-    en: string;
-  };
-  status: string;
-  type: string;
-  showTimes: {
-    date: Date;
-    time: string;
-  }[];
-}
+import { useCity } from "@/lib/city-context";
+import { Event } from "@/lib/types";
 
 interface EventCardProps {
   event: Event;
@@ -54,14 +12,19 @@ interface EventCardProps {
 
 export function EventCard({ event }: EventCardProps) {
   const { language } = useLanguage();
+  const { currencySymbol, selectedCity } = useCity();
   
-  const title = language === 'ar' ? event.title?.ar : event.title?.en || event.title?.ar || '';
-  const venueName = event.venueId?.name ? (language === 'ar' ? event.venueId.name.ar : event.venueId.name.en) : '';
-  const cityName = event.cityId?.name ? (language === 'ar' ? event.cityId.name.ar : event.cityId.name.en) : '';
+  const title = event.title || '';
+  const venueName = (event.venueId && typeof event.venueId === 'object' && 'name' in event.venueId)
+    ? (language === 'ar' ? event.venueId.name.ar : event.venueId.name.en) 
+    : event.venueName || '';
+  const cityName = (event.cityId && typeof event.cityId === 'object' && 'name' in event.cityId) ? (language === 'ar' ? event.cityId.name.ar : event.cityId.name.en) : '';
   const price = event.pricing && event.pricing.length > 0 ? Math.min(...event.pricing.map(p => p.price)) : 0;
   const rating = event.rating || 4.8;
-  const badgeText = event.statusBadge ? (language === 'ar' ? event.statusBadge.ar : event.statusBadge.en) : null;
+  const badgeText = event.statusBadge || null;
   const showDate = event.showTimes && event.showTimes.length > 0 ? new Date(event.showTimes[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+  const displayCurrency = event.currency || selectedCity?.currency || "SAR";
+  const displayCurrencySymbol = event.currency || currencySymbol;
 
   return (
     <Link href={`/events/${event._id}`} className="group block h-full">
@@ -103,11 +66,11 @@ export function EventCard({ event }: EventCardProps) {
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-primary">
-                  {price} <span className="text-xs font-normal text-gray-400">{event.currency}</span>
+                  {price} <span className="text-xs font-normal text-gray-400">{displayCurrencySymbol}</span>
                 </span>
                 {event.originalPrice && event.originalPrice > price && (
                   <span className="text-xs text-gray-400 line-through">
-                    {event.originalPrice} {event.currency}
+                    {event.originalPrice} {displayCurrencySymbol}
                   </span>
                 )}
               </div>

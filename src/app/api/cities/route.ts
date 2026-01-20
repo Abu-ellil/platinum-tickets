@@ -9,16 +9,15 @@ export async function GET() {
   try {
     await dbConnect();
     
-    console.log('GET /api/cities - Database connected');
     const cities = await City.find({})
       .sort({ 'name.en': 1 })
       .lean();
     
     return NextResponse.json({ success: true, data: cities });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching cities:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch cities' },
+      { success: false, error: error instanceof Error ? error.message : 'Failed to fetch cities' },
       { status: 500 }
     );
   }

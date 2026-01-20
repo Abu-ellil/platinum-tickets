@@ -37,6 +37,8 @@ export interface Section {
   width: number;
   height: number;
   priceCategory: string;
+  color?: string;
+  price?: number;
 }
 
 export interface Theater {
@@ -53,3 +55,66 @@ export interface Theater {
     label: string;
   };
 }
+
+export interface Event {
+   _id: string;
+   title: string;
+   venueId?: string | { _id: string; name: { ar: string; en: string }; image: string };
+   venueName?: string;
+   description?: string;
+   cityId: string | { _id: string; name: { ar: string; en: string } };
+   showTimes: {
+     date: string | Date;
+     time: string;
+   }[];
+   pricing: {
+     categoryId: string;
+     price: number;
+   }[];
+   image: string;
+   images?: string[];
+   video?: string;
+   currency: string;
+   status: string;
+   type: string;
+   featured: boolean;
+   rating?: number;
+   originalPrice?: number;
+   statusBadge?: string;
+   subTitle?: string;
+   category?: string;
+   artists?: { name: string; role?: string; image: string }[];
+   terms?: { ar: string; en: string };
+   info?: { ar: string; en: string };
+   gettingThere?: { ar: string; en: string };
+ }
+ 
+ export interface Venue {
+   _id: string;
+   name: {
+     ar: string;
+     en: string;
+   };
+   cityId: string | { _id: string; name: { ar: string; en: string } };
+   theaterId: string;
+   image: string;
+   categories: {
+     id: string;
+     label: string;
+     color: string;
+     defaultPrice: number;
+   }[];
+ }
+ 
+ export interface Artist {
+   _id: string;
+   name: {
+     ar: string;
+     en: string;
+   };
+   image: string;
+   bio?: {
+     ar?: string;
+     en?: string;
+   };
+ }
